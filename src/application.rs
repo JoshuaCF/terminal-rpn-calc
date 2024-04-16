@@ -1,4 +1,4 @@
-use crate::command::{Command, BinOp, UnOp};
+use crate::command::{Command, Command::*, BinOp::*, UnOp::*};
 
 use crossterm::queue;
 use crossterm::event::*;
@@ -113,15 +113,15 @@ impl Calculator {
 		Calculator { terminal, num_stack: NumStack::new(), in_bfr: String::with_capacity(256) }
 	}
 	pub fn process_event(&mut self, e: Event) -> Result<Response, Error> {
-		let mut cmd = Command::NoOp;
+		let mut cmd = NoOp;
 		if let Event::Key(ke) = e {
             if ke.kind != KeyEventKind::Press { return Ok(Response::NoAction); }
             cmd = match &ke.code {
-                KeyCode::Esc => Command::Exit,
-                KeyCode::Backspace => Command::RemoveFromBfr,
+                KeyCode::Esc => Exit,
+                KeyCode::Backspace => RemoveFromBfr,
                 KeyCode::Char(_) => self.process_char(ke)?,
                 KeyCode::Enter => self.process_text()?,
-                _ => Command::NoOp,
+                _ => NoOp,
             };
         }
 		self.process_command(cmd)
@@ -129,7 +129,7 @@ impl Calculator {
 
 	pub fn process_command(&mut self, cmd: Command) -> Result<Response, Error> {
 		match cmd {
-			Command::Draw => {
+			Draw => {
 				queue!(self.terminal, MoveTo(0, 0))?;
 				for v in self.num_stack.nums.iter().rev() {
 					// TODO: These hardcoded boundaries are gross
@@ -146,8 +146,8 @@ impl Calculator {
 				queue!(self.terminal, Clear(ClearType::UntilNewLine))?;
 				self.terminal.flush()?;
 			},
-            Command::AppendToBfr(c) => self.in_bfr.push(c),
-            Command::BinOp(op) => {
+            AppendToBfr(c) => self.in_bfr.push(c),
+            BinOp(op) => {
                 if !self.in_bfr.is_empty() {
                     match self.in_bfr.parse::<f64>() {
                         Ok(v) => self.num_stack.rotate_in(v),
@@ -156,47 +156,47 @@ impl Calculator {
                     self.in_bfr.clear();
                 }
                 match op {
-                    BinOp::Add => self.num_stack.add(),
-                    BinOp::Sub => self.num_stack.sub(),
-                    BinOp::Mul => self.num_stack.mul(),
-                    BinOp::Div => self.num_stack.div(),
-                    BinOp::Swp => self.num_stack.swp(),
-					BinOp::Pow => self.num_stack.pow(),
-					BinOp::Rt => self.num_stack.nrt(),
+                    Add => self.num_stack.add(),
+                    Sub => self.num_stack.sub(),
+                    Mul => self.num_stack.mul(),
+                    Div => self.num_stack.div(),
+                    Swp => self.num_stack.swp(),
+					Pow => self.num_stack.pow(),
+					Rt => self.num_stack.nrt(),
                 }
                 self.in_bfr.clear();
             },
-            Command::UnOp(op) => {
+            UnOp(op) => {
                 match op {
-                    UnOp::Neg => self.num_stack.neg(),
-					UnOp::Sqr => self.num_stack.sqr(),
-					UnOp::Sqrt => self.num_stack.sqrt(),
-					UnOp::Sin => self.num_stack.sin(),
-					UnOp::Cos => self.num_stack.cos(),
-					UnOp::Tan => self.num_stack.tan(),
-					UnOp::Asin => self.num_stack.asin(),
-					UnOp::Acos => self.num_stack.acos(),
-					UnOp::Atan => self.num_stack.atan(),
-					UnOp::Rad => self.num_stack.rad(),
-					UnOp::Deg => self.num_stack.deg(),
-					UnOp::Clr => self.num_stack.rotate_out(self.num_stack.nums[1]),
+                    Neg => self.num_stack.neg(),
+					Sqr => self.num_stack.sqr(),
+					Sqrt => self.num_stack.sqrt(),
+					Sin => self.num_stack.sin(),
+					Cos => self.num_stack.cos(),
+					Tan => self.num_stack.tan(),
+					Asin => self.num_stack.asin(),
+					Acos => self.num_stack.acos(),
+					Atan => self.num_stack.atan(),
+					Rad => self.num_stack.rad(),
+					Deg => self.num_stack.deg(),
+					Pop => self.num_stack.rotate_out(self.num_stack.nums[1]),
                 }
                 self.in_bfr.clear();
             },
-            Command::RotateIn(v) => {
+            RotateIn(v) => {
                 self.num_stack.rotate_in(v.unwrap_or(self.num_stack.nums[0]));
                 self.in_bfr.clear();
             }
-            Command::Exit => return Ok(Response::Exit),
-            Command::ClearBfr => self.in_bfr.clear(),
-            Command::RemoveFromBfr => {self.in_bfr.pop();},
-            Command::NoOp => (),
+            Exit => return Ok(Response::Exit),
+            ClearBfr => self.in_bfr.clear(),
+            RemoveFromBfr => {self.in_bfr.pop();},
+            NoOp => (),
         }
 		Ok(Response::NoAction)
 	}
 
 	fn process_char(&self, kchar: KeyEvent) -> Result<Command, std::io::Error> {
-		if kchar.modifiers.bits() & !KeyModifiers::SHIFT.bits() != 0 { return Ok(Command::NoOp); }
+		if kchar.modifiers.bits() & !KeyModifiers::SHIFT.bits() != 0 { return Ok(NoOp); }
 		let c = match kchar.code {
 			KeyCode::Char(c) => c,
 			_ => panic!(),
@@ -204,40 +204,40 @@ impl Calculator {
 		
 		// TODO: Put these sorts of things into a configuration file
 		match c {
-			'+' => Ok(Command::BinOp(BinOp::Add)),
-			'-' => Ok(Command::BinOp(BinOp::Sub)),
-			'*' => Ok(Command::BinOp(BinOp::Mul)),
-			'/' => Ok(Command::BinOp(BinOp::Div)),
-			'N' => Ok(Command::UnOp(UnOp::Neg)),
-			'S' => Ok(Command::BinOp(BinOp::Swp)),
-			'P' => Ok(Command::BinOp(BinOp::Pow)),
-			'R' => Ok(Command::BinOp(BinOp::Rt)),
-			'C' => Ok(Command::UnOp(UnOp::Clr)),
-			ch => Ok(Command::AppendToBfr(ch)),
+			'+' => Ok(BinOp(Add)),
+			'-' => Ok(BinOp(Sub)),
+			'*' => Ok(BinOp(Mul)),
+			'/' => Ok(BinOp(Div)),
+			'N' => Ok(UnOp(Neg)),
+			'S' => Ok(BinOp(Swp)),
+			'P' => Ok(BinOp(Pow)),
+			'R' => Ok(BinOp(Rt)),
+			'C' => Ok(UnOp(Pop)),
+			ch => Ok(AppendToBfr(ch)),
 		}
 	}
 
 	fn process_text(&self) -> Result<Command, std::io::Error> {
 		match self.in_bfr.as_str() {
-			"sqrt" => Ok(Command::UnOp(UnOp::Sqrt)),
-			"nrt" => Ok(Command::BinOp(BinOp::Rt)),
-			"sqr" => Ok(Command::UnOp(UnOp::Sqr)),
-			"pow" => Ok(Command::BinOp(BinOp::Pow)),
-			"neg" => Ok(Command::UnOp(UnOp::Neg)),
-			"swp" => Ok(Command::BinOp(BinOp::Swp)),
-			"sin" => Ok(Command::UnOp(UnOp::Sin)),
-			"cos" => Ok(Command::UnOp(UnOp::Cos)),
-			"tan" => Ok(Command::UnOp(UnOp::Tan)),
-			"asin" => Ok(Command::UnOp(UnOp::Asin)),
-			"acos" => Ok(Command::UnOp(UnOp::Acos)),
-			"atan" => Ok(Command::UnOp(UnOp::Atan)),
-			"deg" => Ok(Command::UnOp(UnOp::Deg)),
-			"rad" => Ok(Command::UnOp(UnOp::Rad)),
-			"" => Ok(Command::RotateIn(None)),
+			"sqrt" => Ok(UnOp(Sqrt)),
+			"nrt" => Ok(BinOp(Rt)),
+			"sqr" => Ok(UnOp(Sqr)),
+			"pow" => Ok(BinOp(Pow)),
+			"neg" => Ok(UnOp(Neg)),
+			"swp" => Ok(BinOp(Swp)),
+			"sin" => Ok(UnOp(Sin)),
+			"cos" => Ok(UnOp(Cos)),
+			"tan" => Ok(UnOp(Tan)),
+			"asin" => Ok(UnOp(Asin)),
+			"acos" => Ok(UnOp(Acos)),
+			"atan" => Ok(UnOp(Atan)),
+			"deg" => Ok(UnOp(Deg)),
+			"rad" => Ok(UnOp(Rad)),
+			"" => Ok(RotateIn(None)),
 			_ => {
 				match self.in_bfr.parse::<f64>() {
-					Ok(v) => Ok(Command::RotateIn(Some(v))),
-					Err(_) => Ok(Command::ClearBfr),
+					Ok(v) => Ok(RotateIn(Some(v))),
+					Err(_) => Ok(ClearBfr),
 				}
 			}
 		}

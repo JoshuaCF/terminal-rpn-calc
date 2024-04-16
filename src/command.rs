@@ -30,5 +30,5 @@ pub enum UnOp {
 	Atan,
 	Rad,
 	Deg,
-	Clr,
+	Pop,
 }
