@@ -5,6 +5,7 @@ use crossterm::event::*;
 use crossterm::cursor::*;
 use crossterm::terminal::*;
 
+use std::f64::consts::PI;
 use std::io::Error;
 use std::io::Write;
 
@@ -65,9 +66,35 @@ impl NumStack {
 		let res = self.nums[1].powf(1.0 / self.nums[0]);
 		self.rotate_out(res);
 	}
-	fn npwr(&mut self) {
+	fn pow(&mut self) {
 		let res = self.nums[1].powf(self.nums[0]);
 		self.rotate_out(res);
+	}
+
+	fn sin(&mut self) {
+		self.nums[0] = self.nums[0].sin();
+	}
+	fn cos(&mut self) {
+		self.nums[0] = self.nums[0].cos();
+	}
+	fn tan(&mut self) {
+		self.nums[0] = self.nums[0].tan();
+	}
+	fn asin(&mut self) {
+		self.nums[0] = self.nums[0].asin();
+	}
+	fn acos(&mut self) {
+		self.nums[0] = self.nums[0].acos();
+	}
+	fn atan(&mut self) {
+		self.nums[0] = self.nums[0].atan();
+	}
+
+	fn rad(&mut self) {
+		self.nums[0] = (self.nums[0] / 360.0) * 2.0 * PI;
+	}
+	fn deg(&mut self) {
+		self.nums[0] = (self.nums[0] * 360.0) / (2.0 * PI);
 	}
 }
 
@@ -134,7 +161,7 @@ impl Calculator {
                     BinOp::Mul => self.num_stack.mul(),
                     BinOp::Div => self.num_stack.div(),
                     BinOp::Swp => self.num_stack.swp(),
-					BinOp::Pwr => self.num_stack.npwr(),
+					BinOp::Pow => self.num_stack.pow(),
 					BinOp::Rt => self.num_stack.nrt(),
                 }
                 self.in_bfr.clear();
@@ -144,6 +171,15 @@ impl Calculator {
                     UnOp::Neg => self.num_stack.neg(),
 					UnOp::Sqr => self.num_stack.sqr(),
 					UnOp::Sqrt => self.num_stack.sqrt(),
+					UnOp::Sin => self.num_stack.sin(),
+					UnOp::Cos => self.num_stack.cos(),
+					UnOp::Tan => self.num_stack.tan(),
+					UnOp::Asin => self.num_stack.asin(),
+					UnOp::Acos => self.num_stack.acos(),
+					UnOp::Atan => self.num_stack.atan(),
+					UnOp::Rad => self.num_stack.rad(),
+					UnOp::Deg => self.num_stack.deg(),
+					UnOp::Clr => self.num_stack.rotate_out(self.num_stack.nums[1]),
                 }
                 self.in_bfr.clear();
             },
@@ -174,8 +210,9 @@ impl Calculator {
 			'/' => Ok(Command::BinOp(BinOp::Div)),
 			'N' => Ok(Command::UnOp(UnOp::Neg)),
 			'S' => Ok(Command::BinOp(BinOp::Swp)),
-			'P' => Ok(Command::BinOp(BinOp::Pwr)),
+			'P' => Ok(Command::BinOp(BinOp::Pow)),
 			'R' => Ok(Command::BinOp(BinOp::Rt)),
+			'C' => Ok(Command::UnOp(UnOp::Clr)),
 			ch => Ok(Command::AppendToBfr(ch)),
 		}
 	}
@@ -185,9 +222,17 @@ impl Calculator {
 			"sqrt" => Ok(Command::UnOp(UnOp::Sqrt)),
 			"nrt" => Ok(Command::BinOp(BinOp::Rt)),
 			"sqr" => Ok(Command::UnOp(UnOp::Sqr)),
-			"npwr" => Ok(Command::BinOp(BinOp::Pwr)),
+			"pow" => Ok(Command::BinOp(BinOp::Pow)),
 			"neg" => Ok(Command::UnOp(UnOp::Neg)),
 			"swp" => Ok(Command::BinOp(BinOp::Swp)),
+			"sin" => Ok(Command::UnOp(UnOp::Sin)),
+			"cos" => Ok(Command::UnOp(UnOp::Cos)),
+			"tan" => Ok(Command::UnOp(UnOp::Tan)),
+			"asin" => Ok(Command::UnOp(UnOp::Asin)),
+			"acos" => Ok(Command::UnOp(UnOp::Acos)),
+			"atan" => Ok(Command::UnOp(UnOp::Atan)),
+			"deg" => Ok(Command::UnOp(UnOp::Deg)),
+			"rad" => Ok(Command::UnOp(UnOp::Rad)),
 			"" => Ok(Command::RotateIn(None)),
 			_ => {
 				match self.in_bfr.parse::<f64>() {

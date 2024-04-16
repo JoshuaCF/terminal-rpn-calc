@@ -15,11 +15,20 @@ pub enum BinOp {
     Mul,
     Div,
 	Swp,
-	Pwr,
+	Pow,
 	Rt,
 }
 pub enum UnOp {
 	Neg,
 	Sqrt,
 	Sqr,
+	Sin,
+	Cos,
+	Tan,
+	Asin,
+	Acos,
+	Atan,
+	Rad,
+	Deg,
+	Clr,
 }

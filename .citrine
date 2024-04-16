@@ -3,3 +3,5 @@
 3. [ ] "Trig Functions"; tags: function; 
 4. [ ] "Integer Division"; tags: function; 
 5. [x] "Displaying with e notation"; tags: display; 
+6. [ ] "Colorize numbers to better display components"; tags: display; 
+7. [ ] "Read hotkeys and commands from an input file"; tags: config; 
