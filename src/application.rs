@@ -5,10 +5,8 @@ use crossterm::event::*;
 use crossterm::cursor::*;
 use crossterm::terminal::*;
 
-use std::f64::consts::E;
-use std::f64::consts::PI;
-use std::io::Error;
-use std::io::Write;
+use std::f64::consts::{E, PI};
+use std::io::{Error, Write};
 
 const STACK_SIZE: usize = 12;
 struct NumStack {
@@ -154,9 +152,9 @@ impl Calculator {
             AppendToBfr(c) => self.in_bfr.push(c),
             BinOp(op) => {
                 if !self.in_bfr.is_empty() {
-                    match self.in_bfr.parse::<f64>() {
-                        Ok(v) => self.num_stack.rotate_in(v),
-                        Err(_) => (),
+                    match self.parse_num() {
+                        Some(v) => self.num_stack.rotate_in(v),
+                        None => (),
                     };
                     self.in_bfr.clear();
                 }
@@ -240,14 +238,23 @@ impl Calculator {
 			"atan" => Ok(UnOp(Atan)),
 			"deg" => Ok(UnOp(Deg)),
 			"rad" => Ok(UnOp(Rad)),
-			"pi" => Ok(RotateIn(Some(PI))),
-			"e" => Ok(RotateIn(Some(E))),
-			"g" => Ok(RotateIn(Some(9.80665))),
-			"" => Ok(RotateIn(None)),
+			_ => match self.parse_num() {
+				Some(v) => Ok(RotateIn(Some(v))),
+				None => Ok(ClearBfr),
+			},
+		}
+	}
+
+	fn parse_num(&self) -> Option<f64> {
+		match self.in_bfr.as_str() {
+			"pi" => Some(PI),
+			"e" => Some(E),
+			"g" => Some(9.80665),
+			"" => None,
 			_ => {
 				match self.in_bfr.parse::<f64>() {
-					Ok(v) => Ok(RotateIn(Some(v))),
-					Err(_) => Ok(ClearBfr),
+					Ok(v) => Some(v),
+					Err(_) => None,
 				}
 			}
 		}

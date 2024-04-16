@@ -11,3 +11,4 @@
 11. [ ] "Customization for precision"; tags: config; 
 12. [ ] "Customization for decimal location"; tags: config; 
 13. [x] "Multiply by 10^x"; tags: function; 
+14. [x] "Ability to perform ops with a constant value typed in"; tags: function; 
