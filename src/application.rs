@@ -5,6 +5,7 @@ use crossterm::event::*;
 use crossterm::cursor::*;
 use crossterm::terminal::*;
 
+use std::f64::consts::E;
 use std::f64::consts::PI;
 use std::io::Error;
 use std::io::Write;
@@ -70,6 +71,10 @@ impl NumStack {
 		let res = self.nums[1].powf(self.nums[0]);
 		self.rotate_out(res);
 	}
+	fn exp(&mut self) {
+		let res = self.nums[1] * (10.0f64).powf(self.nums[0]);
+		self.rotate_out(res);
+	}
 
 	fn sin(&mut self) {
 		self.nums[0] = self.nums[0].sin();
@@ -133,7 +138,7 @@ impl Calculator {
 				queue!(self.terminal, MoveTo(0, 0))?;
 				for v in self.num_stack.nums.iter().rev() {
 					// TODO: These hardcoded boundaries are gross
-					let fmtd = if *v != 0.0 && (*v < 1e-4 || *v >= 1e11) {
+					let fmtd = if *v != 0.0 && (v.abs() < 1e-4 || v.abs() >= 1e11) {
 						format!("{:.>20.8e}", v)
 					} else {
 						format!("{:.>20.8}", v)
@@ -163,6 +168,7 @@ impl Calculator {
                     Swp => self.num_stack.swp(),
 					Pow => self.num_stack.pow(),
 					Rt => self.num_stack.nrt(),
+					Exp => self.num_stack.exp(),
                 }
                 self.in_bfr.clear();
             },
@@ -213,6 +219,7 @@ impl Calculator {
 			'P' => Ok(BinOp(Pow)),
 			'R' => Ok(BinOp(Rt)),
 			'C' => Ok(UnOp(Pop)),
+			'!' => Ok(BinOp(Exp)),
 			ch => Ok(AppendToBfr(ch)),
 		}
 	}
@@ -233,6 +240,9 @@ impl Calculator {
 			"atan" => Ok(UnOp(Atan)),
 			"deg" => Ok(UnOp(Deg)),
 			"rad" => Ok(UnOp(Rad)),
+			"pi" => Ok(RotateIn(Some(PI))),
+			"e" => Ok(RotateIn(Some(E))),
+			"g" => Ok(RotateIn(Some(9.80665))),
 			"" => Ok(RotateIn(None)),
 			_ => {
 				match self.in_bfr.parse::<f64>() {
