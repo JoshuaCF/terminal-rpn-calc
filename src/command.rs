@@ -18,6 +18,8 @@ pub enum BinOp {
 	Pow,
 	Rt,
 	Exp, // 10^x
+	IntDiv,
+	Mod,
 }
 pub enum UnOp {
 	Neg,

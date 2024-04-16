@@ -6,10 +6,10 @@ use command::Command;
 
 use crossterm::execute;
 use crossterm::event::read;
-use crossterm::terminal::{enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::terminal::{enable_raw_mode, disable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
 
 fn main() -> Result<(), std::io::Error> {
-    enable_raw_mode().unwrap();
+    enable_raw_mode()?;
 
     let mut app = Calculator::new(Box::new(std::io::stdout()));
     execute!(std::io::stdout(), EnterAlternateScreen, Clear(ClearType::All))?;
@@ -23,5 +23,6 @@ fn main() -> Result<(), std::io::Error> {
     }
 
     execute!(std::io::stdout(), LeaveAlternateScreen)?;
+    disable_raw_mode()?;
     Ok(())
 }

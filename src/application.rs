@@ -45,6 +45,13 @@ impl NumStack {
         let res = self.nums[1] / self.nums[0];
         self.rotate_out(res);
     }
+	fn intdiv(&mut self) {
+		let result = (self.nums[1] / self.nums[0]) - (self.nums[1] % self.nums[0]) / self.nums[0];
+		self.rotate_out(result);
+	}
+	fn r#mod(&mut self) {
+		self.rotate_out(self.nums[1] % self.nums[0]);
+	}
 
     fn neg(&mut self) {
         self.nums[0] = -self.nums[0];
@@ -123,7 +130,13 @@ impl Calculator {
                 KeyCode::Esc => Exit,
                 KeyCode::Backspace => RemoveFromBfr,
                 KeyCode::Char(_) => self.process_char(ke)?,
-                KeyCode::Enter => self.process_text()?,
+                KeyCode::Enter => {
+					if self.in_bfr.is_empty() {
+						RotateIn(Some(self.num_stack.nums[0]))
+					} else {
+						self.process_text()?
+					}
+				},
                 _ => NoOp,
             };
         }
@@ -167,6 +180,8 @@ impl Calculator {
 					Pow => self.num_stack.pow(),
 					Rt => self.num_stack.nrt(),
 					Exp => self.num_stack.exp(),
+					IntDiv => self.num_stack.intdiv(),
+					Mod => self.num_stack.r#mod(),
                 }
                 self.in_bfr.clear();
             },
@@ -207,18 +222,26 @@ impl Calculator {
 		};
 		
 		// TODO: Put these sorts of things into a configuration file
-		match c {
-			'+' => Ok(BinOp(Add)),
-			'-' => Ok(BinOp(Sub)),
-			'*' => Ok(BinOp(Mul)),
-			'/' => Ok(BinOp(Div)),
-			'N' => Ok(UnOp(Neg)),
-			'S' => Ok(BinOp(Swp)),
-			'P' => Ok(BinOp(Pow)),
-			'R' => Ok(BinOp(Rt)),
-			'C' => Ok(UnOp(Pop)),
-			'!' => Ok(BinOp(Exp)),
-			ch => Ok(AppendToBfr(ch)),
+		if kchar.modifiers == KeyModifiers::SHIFT {
+			match c.to_ascii_uppercase() {
+				'+' => Ok(BinOp(Add)),
+				'*' => Ok(BinOp(Mul)),
+				'N' => Ok(UnOp(Neg)),
+				'S' => Ok(BinOp(Swp)),
+				'P' => Ok(BinOp(Pow)),
+				'R' => Ok(BinOp(Rt)),
+				'C' => Ok(UnOp(Pop)),
+				'E' => Ok(BinOp(Exp)),
+				'?' => Ok(BinOp(IntDiv)),
+				'%' => Ok(BinOp(Mod)),
+				ch => Ok(AppendToBfr(ch)),
+			}
+		} else {
+			match c.to_ascii_lowercase() {
+				'-' => Ok(BinOp(Sub)),
+				'/' => Ok(BinOp(Div)),
+				ch => Ok(AppendToBfr(ch)),
+			}
 		}
 	}
 
@@ -250,7 +273,6 @@ impl Calculator {
 			"pi" => Some(PI),
 			"e" => Some(E),
 			"g" => Some(9.80665),
-			"" => None,
 			_ => {
 				match self.in_bfr.parse::<f64>() {
 					Ok(v) => Some(v),
