@@ -4,7 +4,7 @@ pub enum Command {
 	ClearBfr,
     BinOp(BinOp),
 	UnOp(UnOp),
-	RotIn(Option<f64>),
+	RotateIn(Option<f64>),
 	Draw,
     Exit,
     NoOp,
@@ -15,7 +15,11 @@ pub enum BinOp {
     Mul,
     Div,
 	Swp,
+	Pwr,
+	Rt,
 }
 pub enum UnOp {
 	Neg,
+	Sqrt,
+	Sqr,
 }

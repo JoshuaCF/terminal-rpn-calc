@@ -55,6 +55,20 @@ impl NumStack {
         self.nums[0] = self.nums[1];
         self.nums[1] = tmp;
     }
+	fn sqrt(&mut self) {
+		self.nums[0] = self.nums[0].sqrt();
+	}
+	fn sqr(&mut self) {
+		self.nums[0] = self.nums[0].powf(2.0);
+	}
+	fn nrt(&mut self) {
+		let res = self.nums[1].powf(1.0 / self.nums[0]);
+		self.rotate_out(res);
+	}
+	fn npwr(&mut self) {
+		let res = self.nums[1].powf(self.nums[0]);
+		self.rotate_out(res);
+	}
 }
 
 pub enum Response {
@@ -91,7 +105,13 @@ impl Calculator {
 			Command::Draw => {
 				queue!(self.terminal, MoveTo(0, 0))?;
 				for v in self.num_stack.nums.iter().rev() {
-					write!(self.terminal, "{:.>12.4}", v)?;
+					// TODO: These hardcoded boundaries are gross
+					let fmtd = if *v != 0.0 && (*v < 1e-4 || *v >= 1e11) {
+						format!("{:.>20.8e}", v)
+					} else {
+						format!("{:.>20.8}", v)
+					};
+					write!(self.terminal, "{}", fmtd)?;
 					queue!(self.terminal, Clear(ClearType::UntilNewLine), MoveToNextLine(1))?;
 				}
 				queue!(self.terminal, Clear(ClearType::UntilNewLine), MoveToNextLine(1))?;
@@ -114,15 +134,20 @@ impl Calculator {
                     BinOp::Mul => self.num_stack.mul(),
                     BinOp::Div => self.num_stack.div(),
                     BinOp::Swp => self.num_stack.swp(),
+					BinOp::Pwr => self.num_stack.npwr(),
+					BinOp::Rt => self.num_stack.nrt(),
                 }
                 self.in_bfr.clear();
             },
             Command::UnOp(op) => {
                 match op {
                     UnOp::Neg => self.num_stack.neg(),
+					UnOp::Sqr => self.num_stack.sqr(),
+					UnOp::Sqrt => self.num_stack.sqrt(),
                 }
+                self.in_bfr.clear();
             },
-            Command::RotIn(v) => {
+            Command::RotateIn(v) => {
                 self.num_stack.rotate_in(v.unwrap_or(self.num_stack.nums[0]));
                 self.in_bfr.clear();
             }
@@ -141,23 +166,32 @@ impl Calculator {
 			_ => panic!(),
 		};
 		
+		// TODO: Put these sorts of things into a configuration file
 		match c {
 			'+' => Ok(Command::BinOp(BinOp::Add)),
 			'-' => Ok(Command::BinOp(BinOp::Sub)),
 			'*' => Ok(Command::BinOp(BinOp::Mul)),
 			'/' => Ok(Command::BinOp(BinOp::Div)),
 			'N' => Ok(Command::UnOp(UnOp::Neg)),
+			'S' => Ok(Command::BinOp(BinOp::Swp)),
+			'P' => Ok(Command::BinOp(BinOp::Pwr)),
+			'R' => Ok(Command::BinOp(BinOp::Rt)),
 			ch => Ok(Command::AppendToBfr(ch)),
 		}
 	}
 
 	fn process_text(&self) -> Result<Command, std::io::Error> {
 		match self.in_bfr.as_str() {
+			"sqrt" => Ok(Command::UnOp(UnOp::Sqrt)),
+			"nrt" => Ok(Command::BinOp(BinOp::Rt)),
+			"sqr" => Ok(Command::UnOp(UnOp::Sqr)),
+			"npwr" => Ok(Command::BinOp(BinOp::Pwr)),
+			"neg" => Ok(Command::UnOp(UnOp::Neg)),
 			"swp" => Ok(Command::BinOp(BinOp::Swp)),
-			"" => Ok(Command::RotIn(None)),
+			"" => Ok(Command::RotateIn(None)),
 			_ => {
 				match self.in_bfr.parse::<f64>() {
-					Ok(v) => Ok(Command::RotIn(Some(v))),
+					Ok(v) => Ok(Command::RotateIn(Some(v))),
 					Err(_) => Ok(Command::ClearBfr),
 				}
 			}

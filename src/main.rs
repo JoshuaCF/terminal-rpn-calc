@@ -8,7 +8,6 @@ use crossterm::execute;
 use crossterm::event::read;
 use crossterm::terminal::{enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
 
-
 fn main() -> Result<(), std::io::Error> {
     enable_raw_mode().unwrap();
 
