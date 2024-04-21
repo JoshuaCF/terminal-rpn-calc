@@ -2,7 +2,10 @@ use crate::command::{Command, Command::*, BinOp::*, UnOp::*};
 use crate::tui_windows::*;
 
 use crossterm::event::*;
+use crossterm::style::Color;
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::f64::consts::{E, PI};
 use std::io::Error;
 
@@ -104,20 +107,61 @@ impl NumStack {
 	}
 }
 
+pub struct Memory {
+	mem: HashMap<char, f64>,
+}
+impl WindowDisplay for Memory {
+	fn render(&self, _: (u16, u16)) -> Vec<RenderAction> {
+		let mut actions = vec!();
+
+		actions.push(RenderAction::MoveTo(0, 0));
+		let mut entries = self.mem.iter().collect::<Vec<_>>();
+		entries.sort_by(|a, b| a.0.cmp(b.0));
+		for (k, v) in entries.iter() {
+			actions.push(RenderAction::Write(PrettyString::new(format!("{}: ", k)).style(StyleProperty::FgColor(Color::Green))));
+			let fmtd = if **v != 0.0 && (v.abs() < 1e-4 || v.abs() >= 1e11) {
+				format!("{:.>20.8e}", v)
+			} else {
+				format!("{:.>20.8}", v)
+			};
+			actions.push(RenderAction::Write(PrettyString::new(format!("{fmtd}")).style(StyleProperty::FgColor(Color::Cyan))));
+			actions.push(RenderAction::ClearToNextLine);
+			actions.push(RenderAction::MoveToNextLine(1));
+		}
+		actions.push(RenderAction::ClearToEnd);
+
+		actions
+	}
+}
+impl Memory {
+	pub fn new() -> Memory {
+		Memory { mem: HashMap::new() }
+	}
+	fn store(&mut self, c: char, v: f64) {
+		self.mem.insert(c, v);
+	}
+	fn recall(&self, c: char) -> Option<f64> {
+		self.mem.get(&c).copied()
+	}
+	fn delete(&mut self, c: char) {
+		self.mem.remove(&c);
+	}
+}
+
 pub enum Response {
 	NoAction,
 	Exit,
 }
 
-pub struct Calculator {
+pub struct Calculator<'a> {
     num_stack: NumStack,
 	in_bfr: String,
+	memory: &'a RefCell<Memory>,
 }
-impl WindowDisplay for Calculator {
+impl WindowDisplay for Calculator<'_> {
 	fn render(&self, _: (u16, u16)) -> Vec<RenderAction> {
 		let mut actions = vec!();
 
-		actions.push(RenderAction::HideCursor);
 		actions.push(RenderAction::MoveTo(0, 0));
 		for v in self.num_stack.nums.iter().rev() {
 			// TODO: These hardcoded boundaries are gross
@@ -126,22 +170,21 @@ impl WindowDisplay for Calculator {
 			} else {
 				format!("{:.>20.8}", v)
 			};
-			actions.push(RenderAction::Write(PrettyString::new(fmtd)));
+			actions.push(RenderAction::Write(PrettyString::new(fmtd).style(StyleProperty::FgColor(Color::Cyan))));
 			actions.push(RenderAction::ClearToNextLine);
 			actions.push(RenderAction::MoveToNextLine(1));
 		}
 		actions.push(RenderAction::ClearToNextLine);
 		actions.push(RenderAction::MoveToNextLine(1));
-		actions.push(RenderAction::Write(PrettyString::new(self.in_bfr.clone())));
+		actions.push(RenderAction::Write(PrettyString::new(self.in_bfr.clone()).style(StyleProperty::FgColor(Color::Magenta))));
 		actions.push(RenderAction::ClearToEnd);
-		actions.push(RenderAction::ShowCursor);
 
 		actions
 	}
 }
-impl Calculator {
-	pub fn new() -> Calculator {
-		Calculator { num_stack: NumStack::new(), in_bfr: String::with_capacity(256) }
+impl<'a> Calculator<'a> {
+	pub fn new(memory: &'a RefCell<Memory>) -> Calculator<'a> {
+		Calculator { num_stack: NumStack::new(), in_bfr: String::with_capacity(256), memory }
 	}
 	pub fn process_event(&mut self, e: Event) -> Result<Response, Error> {
 		let mut cmd = NoOp;
@@ -214,13 +257,29 @@ impl Calculator {
             Exit => return Ok(Response::Exit),
             ClearBfr => self.in_bfr.clear(),
             RemoveFromBfr => {self.in_bfr.pop();},
+			Sto(c) => {
+				self.in_bfr.clear();
+				let mut mem = self.memory.borrow_mut();
+				mem.store(c, self.num_stack.nums[0]);
+			},
+			Rcl(c) => {
+				self.in_bfr.clear();
+				let mem = self.memory.borrow();
+				if let Some(v) = mem.recall(c) {
+					self.num_stack.rotate_in(v);
+				}
+			},
+			Del(c) => {
+				self.in_bfr.clear();
+				let mut mem = self.memory.borrow_mut();
+				mem.delete(c);
+			},
             NoOp => (),
         }
 		Ok(Response::NoAction)
 	}
 
 	fn process_char(&self, kchar: KeyEvent) -> Result<Command, std::io::Error> {
-		if kchar.modifiers.bits() & !KeyModifiers::SHIFT.bits() != 0 { return Ok(NoOp); }
 		let c = match kchar.code {
 			KeyCode::Char(c) => c,
 			_ => panic!(),
@@ -241,12 +300,45 @@ impl Calculator {
 				'%' => Ok(BinOp(Mod)),
 				ch => Ok(AppendToBfr(ch)),
 			}
-		} else {
+		} else if kchar.modifiers == KeyModifiers::NONE {
 			match c.to_ascii_lowercase() {
 				'-' => Ok(BinOp(Sub)),
 				'/' => Ok(BinOp(Div)),
 				ch => Ok(AppendToBfr(ch)),
 			}
+		} else if kchar.modifiers == KeyModifiers::CONTROL {
+			match c.to_ascii_lowercase() {
+				's' => {
+					if self.in_bfr.len() != 1 { return Ok(NoOp); }
+					let bfr_c = self.in_bfr.chars().next().unwrap();
+					if bfr_c.is_ascii_alphabetic() {
+						Ok(Sto(bfr_c))
+					} else {
+						Ok(NoOp)
+					}
+				},
+				'd' => {
+					if self.in_bfr.len() != 1 { return Ok(NoOp); }
+					let bfr_c = self.in_bfr.chars().next().unwrap();
+					if bfr_c.is_ascii_alphabetic() {
+						Ok(Del(bfr_c))
+					} else {
+						Ok(NoOp)
+					}
+				},
+				'r' => {
+					if self.in_bfr.len() != 1 { return Ok(NoOp); }
+					let bfr_c = self.in_bfr.chars().next().unwrap();
+					if bfr_c.is_ascii_alphabetic() {
+						Ok(Rcl(bfr_c))
+					} else {
+						Ok(NoOp)
+					}
+				},
+				_ => Ok(NoOp),
+			}
+		} else {
+			Ok(NoOp)
 		}
 	}
 

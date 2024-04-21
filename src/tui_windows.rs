@@ -39,7 +39,7 @@ impl PrettyString {
 	pub fn new(contents: String) -> PrettyString {
 		PrettyString { contents, style: vec!() }
 	}
-	pub fn style(&mut self, style: StyleProperty) -> &mut Self {
+	pub fn style(mut self, style: StyleProperty) -> Self {
 		self.style.push(style);
 		self
 	}
@@ -155,10 +155,10 @@ fn offset(origin: (u16, u16), offset: (u16, u16)) -> (u16, u16) {
 
 pub struct Window<'a> {
 	pub config: WindowConfig,
-	pub display: &'a RefCell<dyn WindowDisplay>,
+	pub display: &'a RefCell<dyn WindowDisplay + 'a>,
 }
 impl<'a> Window<'a> {
-	pub fn new(display: &'a RefCell<dyn WindowDisplay>, config: WindowConfig) -> Window<'a> {
+	pub fn new(display: &'a RefCell<dyn WindowDisplay + 'a>, config: WindowConfig) -> Window<'a> {
 		Window {
 			config,
 			display,
@@ -195,8 +195,8 @@ impl<'a> Window<'a> {
 					// Starting from cursor position, write ' ' until the end of the window
 					// Each time the cursor reaches the end of the line, move to the next line
 					let original_cursor = *cursor;
-					for row in cursor.0..size.0 {
-						for _ in cursor.1..size.1 {
+					for row in cursor.0..(size.0 + origin.0) {
+						for _ in cursor.1..(size.1 + origin.1) {
 							queue!(out, Print(" ")).unwrap();
 						}
 						queue!(out, MoveTo(origin.1, row+1)).unwrap();
@@ -218,11 +218,11 @@ impl<'a> Window<'a> {
 						// printing what fits until the end of the string
 						let mut to_write = pretty_string.contents.chars();
 						while let Some(c) = to_write.next() {
-							if cursor.1 >= size.1 {
+							if cursor.1 >= size.1 + origin.1{
 								// Move to the next line
 								let new_row = cursor.0 + 1;
 								// If the next line is out of bounds, stop writing
-								if new_row >= size.0 {
+								if new_row >= size.0 + origin.0 {
 									break;
 								}
 								*cursor = (new_row, origin.1);
@@ -232,7 +232,7 @@ impl<'a> Window<'a> {
 							cursor.1 += 1;
 						}
 					} else {
-						let available_space = size.1 - cur_col;
+						let available_space = (size.1 + origin.1) - cur_col;
 						// This does not appropriately handle characters that combine into one grapheme but
 						// I don't care, I'm not writing a professional library here
 						let to_write = pretty_string.contents.chars().take(available_space as usize).collect::<String>(); 

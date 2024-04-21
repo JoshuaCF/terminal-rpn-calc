@@ -7,6 +7,9 @@ pub enum Command {
 	RotateIn(Option<f64>),
     Exit,
     NoOp,
+	Sto(char),
+	Rcl(char),
+	Del(char),
 }
 pub enum BinOp {
     Add,

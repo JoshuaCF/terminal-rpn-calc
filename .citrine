@@ -6,11 +6,12 @@
 6. [ ] "Colorize numbers to better display components"; tags: display; 
 7. [ ] "Read hotkeys and commands from an input file"; tags: config; 
 8. [x] "Ability to type and insert common constants like pi"; tags: function; 
-9. [ ] "Memory for storing/recalling values"; tags: function; 
+9. [x] "Memory for storing/recalling values"; tags: function; 
 10. [ ] "Customization for stack size"; tags: config; 
 11. [ ] "Customization for precision"; tags: config; 
 12. [ ] "Customization for decimal location"; tags: config; 
 13. [x] "Multiply by 10^x"; tags: function; 
 14. [x] "Ability to perform ops with a constant value typed in"; tags: function; 
 15. [x] "Modulus"; tags: function; 
-16. [ ] "Implement 'panes' for rendering components"; tags: display; 
+16. [x] "Implement 'panes' for rendering components"; tags: display; 
+17. [ ] "Allow memory values to be modified with {cmd} {var} syntax"; tags: function; 
