@@ -5,7 +5,6 @@ pub enum Command {
     BinOp(BinOp),
 	UnOp(UnOp),
 	RotateIn(Option<f64>),
-	Draw,
     Exit,
     NoOp,
 }

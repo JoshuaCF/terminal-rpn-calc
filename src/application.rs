@@ -1,12 +1,10 @@
 use crate::command::{Command, Command::*, BinOp::*, UnOp::*};
+use crate::tui_windows::*;
 
-use crossterm::queue;
 use crossterm::event::*;
-use crossterm::cursor::*;
-use crossterm::terminal::*;
 
 use std::f64::consts::{E, PI};
-use std::io::{Error, Write};
+use std::io::Error;
 
 const STACK_SIZE: usize = 12;
 struct NumStack {
@@ -58,9 +56,7 @@ impl NumStack {
     }
 
     fn swp(&mut self) {
-        let tmp = self.nums[0];
-        self.nums[0] = self.nums[1];
-        self.nums[1] = tmp;
+        self.nums.swap(0, 1);
     }
 	fn sqrt(&mut self) {
 		self.nums[0] = self.nums[0].sqrt();
@@ -114,13 +110,38 @@ pub enum Response {
 }
 
 pub struct Calculator {
-    terminal: Box<dyn Write>,
     num_stack: NumStack,
 	in_bfr: String,
 }
+impl WindowDisplay for Calculator {
+	fn render(&self, _: (u16, u16)) -> Vec<RenderAction> {
+		let mut actions = vec!();
+
+		actions.push(RenderAction::HideCursor);
+		actions.push(RenderAction::MoveTo(0, 0));
+		for v in self.num_stack.nums.iter().rev() {
+			// TODO: These hardcoded boundaries are gross
+			let fmtd = if *v != 0.0 && (v.abs() < 1e-4 || v.abs() >= 1e11) {
+				format!("{:.>20.8e}", v)
+			} else {
+				format!("{:.>20.8}", v)
+			};
+			actions.push(RenderAction::Write(PrettyString::new(fmtd)));
+			actions.push(RenderAction::ClearToNextLine);
+			actions.push(RenderAction::MoveToNextLine(1));
+		}
+		actions.push(RenderAction::ClearToNextLine);
+		actions.push(RenderAction::MoveToNextLine(1));
+		actions.push(RenderAction::Write(PrettyString::new(self.in_bfr.clone())));
+		actions.push(RenderAction::ClearToEnd);
+		actions.push(RenderAction::ShowCursor);
+
+		actions
+	}
+}
 impl Calculator {
-	pub fn new(terminal: Box<dyn Write>) -> Calculator {
-		Calculator { terminal, num_stack: NumStack::new(), in_bfr: String::with_capacity(256) }
+	pub fn new() -> Calculator {
+		Calculator { num_stack: NumStack::new(), in_bfr: String::with_capacity(256) }
 	}
 	pub fn process_event(&mut self, e: Event) -> Result<Response, Error> {
 		let mut cmd = NoOp;
@@ -145,26 +166,10 @@ impl Calculator {
 
 	pub fn process_command(&mut self, cmd: Command) -> Result<Response, Error> {
 		match cmd {
-			Draw => {
-				queue!(self.terminal, MoveTo(0, 0))?;
-				for v in self.num_stack.nums.iter().rev() {
-					// TODO: These hardcoded boundaries are gross
-					let fmtd = if *v != 0.0 && (v.abs() < 1e-4 || v.abs() >= 1e11) {
-						format!("{:.>20.8e}", v)
-					} else {
-						format!("{:.>20.8}", v)
-					};
-					write!(self.terminal, "{}", fmtd)?;
-					queue!(self.terminal, Clear(ClearType::UntilNewLine), MoveToNextLine(1))?;
-				}
-				queue!(self.terminal, Clear(ClearType::UntilNewLine), MoveToNextLine(1))?;
-				write!(self.terminal, "{}", self.in_bfr)?;
-				queue!(self.terminal, Clear(ClearType::UntilNewLine))?;
-				self.terminal.flush()?;
-			},
             AppendToBfr(c) => self.in_bfr.push(c),
             BinOp(op) => {
                 if !self.in_bfr.is_empty() {
+					#[allow(clippy::single_match)]
                     match self.parse_num() {
                         Some(v) => self.num_stack.rotate_in(v),
                         None => (),
