@@ -1,24 +1,3 @@
-/*
-How do I want to approach this?
-Desired behavior: ability to create panes that can be composed into groups with relative sizes and easily resized through that
-	- These panes can be of different types and have different functionalities
-	- A main controller struct should be able to contain the configuration of the pane's rendering and the absolute sizes
-		the panes have to work within should be computed automatically by this module
-	- The main controller struct will still be in charge of handling user input and sending the events to the appropriate panes
-	- The main controller struct should be able to be aware of the actual type of the pane and call all its unique functions
-
-For implementation, one of the `Cell` types might work well here.
-Structs that are meant to be displayed in a pane should implement a trait for the display.
-	- The actual display should not be direct, instead it should return the list of actions it would like to take
-	- These actions can be enum variants
-	- The actual code for rendering it will be a struct that defines a pane's configuration (line wrapping, border, margin, etc.)
-	- This struct will contain a trait object of the thing it actually tries to render
-		- This pane configuration will also implement the trait so that the panes can be nested!
-	- When the pane configuration is rendered, it will compute the areas available for its children and pass them that information
-	- It will then take the returned actions, apply the configurations to them (wrapping when the line goes off the edge if enabled, etc.)
-		and render appropriately
-*/
-
 use crossterm::queue;
 use crossterm::cursor::*;
 use crossterm::style::*;
