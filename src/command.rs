@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum Command {
     AppendToBfr(char),
 	RemoveFromBfr,
@@ -11,6 +12,7 @@ pub enum Command {
 	Rcl(char),
 	Del(char),
 }
+#[derive(Debug)]
 pub enum BinOp {
     Add,
     Sub,
@@ -23,6 +25,7 @@ pub enum BinOp {
 	IntDiv,
 	Mod,
 }
+#[derive(Debug)]
 pub enum UnOp {
 	Neg,
 	Sqrt,

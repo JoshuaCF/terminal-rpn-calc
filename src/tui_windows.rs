@@ -26,11 +26,13 @@ use crossterm::style::*;
 use std::cell::RefCell;
 use std::io::Write;
 
+#[derive(Debug)]
 pub enum StyleProperty {
 	FgColor(Color),
 	BgColor(Color),
 }
 
+#[derive(Debug)]
 pub struct PrettyString {
 	contents: String,
 	style: Vec<StyleProperty>,
@@ -46,6 +48,7 @@ impl PrettyString {
 }
 
 // Mostly wrappers around crossterm's commands
+#[derive(Debug)]
 pub enum RenderAction {
 	MoveTo(u16, u16),
 	MoveToNextLine(u16),
@@ -179,14 +182,14 @@ impl<'a> Window<'a> {
 				}
 				RenderAction::MoveToNextLine(lines) => {
 					let (cur_row, _) = *cursor;
-					let new_row = cur_row + lines.min(size.0);
+					let new_row = cur_row + lines.min((size.0 + origin.0) - cur_row);
 					*cursor = (new_row, origin.1);
 					queue!(out, MoveTo(origin.1, new_row)).unwrap();
 				}
 				RenderAction::ClearToNextLine => {
 					let (cur_row, cur_col) = *cursor;
 					// Write ' ' until right bound of this window
-					for _ in cur_col..size.1 {
+					for _ in cur_col..(size.1 + origin.1) {
 						queue!(out, Print(" ")).unwrap();
 					}
 					queue!(out, MoveTo(cur_col, cur_row)).unwrap();
