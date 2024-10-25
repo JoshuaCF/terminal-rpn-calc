@@ -1,23 +1,23 @@
 #[derive(Debug)]
 pub enum Command {
-    AppendToBfr(char),
+	AppendToBfr(char),
 	RemoveFromBfr,
 	ClearBfr,
-    BinOp(BinOp),
+	BinOp(BinOp),
 	UnOp(UnOp),
 	RotateIn(Option<f64>),
-    Exit,
-    NoOp,
+	Exit,
+	NoOp,
 	Sto(char),
 	Rcl(char),
 	Del(char),
 }
 #[derive(Debug)]
 pub enum BinOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
+	Add,
+	Sub,
+	Mul,
+	Div,
 	Swp,
 	Pow,
 	Rt,

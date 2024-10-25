@@ -11,41 +11,41 @@ use std::io::Error;
 
 const STACK_SIZE: usize = 12;
 struct NumStack {
-    nums: [f64; STACK_SIZE],
+	nums: [f64; STACK_SIZE],
 }
 impl NumStack {
-    fn new() -> NumStack {
-        NumStack { nums: [0.0; STACK_SIZE] }
-    }
-    fn rotate_in(&mut self, num: f64) {
-        for i in (0..STACK_SIZE-1).rev() {
-            self.nums[i+1] = self.nums[i];
-        }
-        self.nums[0] = num;
-    }
-    fn rotate_out(&mut self, num: f64) {
-        for i in 1..STACK_SIZE {
-            self.nums[i-1] = self.nums[i];
-        }
-        self.nums[0] = num;
-    }
+	fn new() -> NumStack {
+		NumStack { nums: [0.0; STACK_SIZE] }
+	}
+	fn rotate_in(&mut self, num: f64) {
+		for i in (0..STACK_SIZE-1).rev() {
+			self.nums[i+1] = self.nums[i];
+		}
+		self.nums[0] = num;
+	}
+	fn rotate_out(&mut self, num: f64) {
+		for i in 1..STACK_SIZE {
+			self.nums[i-1] = self.nums[i];
+		}
+		self.nums[0] = num;
+	}
 
-    fn add(&mut self) {
-        let res = self.nums[1] + self.nums[0];
-        self.rotate_out(res);
-    }
-    fn sub(&mut self) {
-        let res = self.nums[1] - self.nums[0];
-        self.rotate_out(res);
-    }
-    fn mul(&mut self) {
-        let res = self.nums[1] * self.nums[0];
-        self.rotate_out(res);
-    }
-    fn div(&mut self) {
-        let res = self.nums[1] / self.nums[0];
-        self.rotate_out(res);
-    }
+	fn add(&mut self) {
+		let res = self.nums[1] + self.nums[0];
+		self.rotate_out(res);
+	}
+	fn sub(&mut self) {
+		let res = self.nums[1] - self.nums[0];
+		self.rotate_out(res);
+	}
+	fn mul(&mut self) {
+		let res = self.nums[1] * self.nums[0];
+		self.rotate_out(res);
+	}
+	fn div(&mut self) {
+		let res = self.nums[1] / self.nums[0];
+		self.rotate_out(res);
+	}
 	fn intdiv(&mut self) {
 		let result = (self.nums[1] / self.nums[0]) - (self.nums[1] % self.nums[0]) / self.nums[0];
 		self.rotate_out(result);
@@ -54,13 +54,13 @@ impl NumStack {
 		self.rotate_out(self.nums[1] % self.nums[0]);
 	}
 
-    fn neg(&mut self) {
-        self.nums[0] = -self.nums[0];
-    }
+	fn neg(&mut self) {
+		self.nums[0] = -self.nums[0];
+	}
 
-    fn swp(&mut self) {
-        self.nums.swap(0, 1);
-    }
+	fn swp(&mut self) {
+		self.nums.swap(0, 1);
+	}
 	fn sqrt(&mut self) {
 		self.nums[0] = self.nums[0].sqrt();
 	}
@@ -154,7 +154,7 @@ pub enum Response {
 }
 
 pub struct Calculator<'a> {
-    num_stack: NumStack,
+	num_stack: NumStack,
 	in_bfr: String,
 	memory: &'a RefCell<Memory>,
 }
@@ -189,53 +189,53 @@ impl<'a> Calculator<'a> {
 	pub fn process_event(&mut self, e: Event) -> Result<Response, Error> {
 		let mut cmd = NoOp;
 		if let Event::Key(ke) = e {
-            if ke.kind != KeyEventKind::Press { return Ok(Response::NoAction); }
-            cmd = match &ke.code {
-                KeyCode::Esc => Exit,
-                KeyCode::Backspace => RemoveFromBfr,
-                KeyCode::Char(_) => self.process_char(ke)?,
-                KeyCode::Enter => {
+			if ke.kind != KeyEventKind::Press { return Ok(Response::NoAction); }
+			cmd = match &ke.code {
+				KeyCode::Esc => Exit,
+				KeyCode::Backspace => RemoveFromBfr,
+				KeyCode::Char(_) => self.process_char(ke)?,
+				KeyCode::Enter => {
 					if self.in_bfr.is_empty() {
 						RotateIn(Some(self.num_stack.nums[0]))
 					} else {
 						self.process_text()?
 					}
 				},
-                _ => NoOp,
-            };
-        }
+				_ => NoOp,
+			};
+		}
 		self.process_command(cmd)
 	}
 
 	pub fn process_command(&mut self, cmd: Command) -> Result<Response, Error> {
 		match cmd {
-            AppendToBfr(c) => self.in_bfr.push(c),
-            BinOp(op) => {
-                if !self.in_bfr.is_empty() {
+			AppendToBfr(c) => self.in_bfr.push(c),
+			BinOp(op) => {
+				if !self.in_bfr.is_empty() {
 					#[allow(clippy::single_match)]
-                    match self.parse_num() {
-                        Some(v) => self.num_stack.rotate_in(v),
-                        None => (),
-                    };
-                    self.in_bfr.clear();
-                }
-                match op {
-                    Add => self.num_stack.add(),
-                    Sub => self.num_stack.sub(),
-                    Mul => self.num_stack.mul(),
-                    Div => self.num_stack.div(),
-                    Swp => self.num_stack.swp(),
+					match self.parse_num() {
+						Some(v) => self.num_stack.rotate_in(v),
+						None => (),
+					};
+					self.in_bfr.clear();
+				}
+				match op {
+					Add => self.num_stack.add(),
+					Sub => self.num_stack.sub(),
+					Mul => self.num_stack.mul(),
+					Div => self.num_stack.div(),
+					Swp => self.num_stack.swp(),
 					Pow => self.num_stack.pow(),
 					Rt => self.num_stack.nrt(),
 					Exp => self.num_stack.exp(),
 					IntDiv => self.num_stack.intdiv(),
 					Mod => self.num_stack.r#mod(),
-                }
-                self.in_bfr.clear();
-            },
-            UnOp(op) => {
-                match op {
-                    Neg => self.num_stack.neg(),
+				}
+				self.in_bfr.clear();
+			},
+			UnOp(op) => {
+				match op {
+					Neg => self.num_stack.neg(),
 					Sqr => self.num_stack.sqr(),
 					Sqrt => self.num_stack.sqrt(),
 					Sin => self.num_stack.sin(),
@@ -247,16 +247,16 @@ impl<'a> Calculator<'a> {
 					Rad => self.num_stack.rad(),
 					Deg => self.num_stack.deg(),
 					Pop => self.num_stack.rotate_out(self.num_stack.nums[1]),
-                }
-                self.in_bfr.clear();
-            },
-            RotateIn(v) => {
-                self.num_stack.rotate_in(v.unwrap_or(self.num_stack.nums[0]));
-                self.in_bfr.clear();
-            }
-            Exit => return Ok(Response::Exit),
-            ClearBfr => self.in_bfr.clear(),
-            RemoveFromBfr => {self.in_bfr.pop();},
+				}
+				self.in_bfr.clear();
+			},
+			RotateIn(v) => {
+				self.num_stack.rotate_in(v.unwrap_or(self.num_stack.nums[0]));
+				self.in_bfr.clear();
+			}
+			Exit => return Ok(Response::Exit),
+			ClearBfr => self.in_bfr.clear(),
+			RemoveFromBfr => {self.in_bfr.pop();},
 			Sto(c) => {
 				self.in_bfr.clear();
 				let mut mem = self.memory.borrow_mut();
@@ -274,8 +274,8 @@ impl<'a> Calculator<'a> {
 				let mut mem = self.memory.borrow_mut();
 				mem.delete(c);
 			},
-            NoOp => (),
-        }
+			NoOp => (),
+		}
 		Ok(Response::NoAction)
 	}
 

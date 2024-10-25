@@ -217,7 +217,7 @@ impl<'a> Window<'a> {
 						let available_space = (size.1 + origin.1) - cur_col;
 						// This does not appropriately handle characters that combine into one grapheme but
 						// I don't care, I'm not writing a professional library here
-						let to_write = pretty_string.contents.chars().take(available_space as usize).collect::<String>(); 
+						let to_write = pretty_string.contents.chars().take(available_space as usize).collect::<String>();
 						queue!(out, Print(format!("{to_write}"))).unwrap();
 						cursor.1 += to_write.len() as u16;
 					}
