@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::f64::consts::PI;
 
 #[derive(Debug)]
-pub enum Command {
+pub enum CalcCmd {
 	BinOp(BinOp),
 	UnOp(UnOp),
 	Push(Option<f64>),
@@ -39,24 +39,23 @@ pub enum UnOp {
 	Pop,
 }
 
-// TODO: Make this configurable at runtime
-const STACK_SIZE: usize = 12;
+#[derive(Debug)]
 pub struct Calculator {
-	nums: [f64; STACK_SIZE],
-	memory: HashMap<char, f64>,
+	pub nums: Vec<f64>,
+	pub memory: HashMap<char, f64>,
 }
 impl Calculator {
-	pub fn new() -> Calculator {
+	pub fn new(stack_size: usize) -> Calculator {
 		Calculator {
-			nums: [0.0; STACK_SIZE],
+			nums: vec!(0.0; stack_size),
 			memory: HashMap::new(),
 		}
 	}
 
-	pub fn process_command(&mut self, cmd: Command) {
+	pub fn process_command(&mut self, cmd: CalcCmd) {
 		match cmd {
 			// Stack commands
-			Command::BinOp(op) => {
+			CalcCmd::BinOp(op) => {
 				match op {
 					BinOp::Add => self.rotate_out(self.nums[1] + self.nums[0]),
 					BinOp::Sub => self.rotate_out(self.nums[1] - self.nums[0]),
@@ -74,7 +73,7 @@ impl Calculator {
 					BinOp::Mod => self.rotate_out(self.nums[1] % self.nums[0]),
 				}
 			},
-			Command::UnOp(op) => {
+			CalcCmd::UnOp(op) => {
 				match op {
 					UnOp::Neg => self.nums[0] = -self.nums[0],
 					UnOp::Sqrt => self.nums[0] = self.nums[0].sqrt(),
@@ -90,16 +89,16 @@ impl Calculator {
 					UnOp::Pop => self.rotate_out(self.nums[1]),
 				}
 			},
-			Command::Push(val) => self.rotate_in(val.unwrap_or(self.nums[0])),
+			CalcCmd::Push(val) => self.rotate_in(val.unwrap_or(self.nums[0])),
 			// Memory commands
-			Command::Sto(key) => { self.memory.insert(key, self.nums[0]); },
-			Command::Del(key) => { self.memory.remove(&key); },
-			Command::Rcl(key) => if let Some(v) = self.memory.get(&key).copied() { self.rotate_in(v); },
+			CalcCmd::Sto(key) => { self.memory.insert(key, self.nums[0]); },
+			CalcCmd::Del(key) => { self.memory.remove(&key); },
+			CalcCmd::Rcl(key) => if let Some(v) = self.memory.get(&key).copied() { self.rotate_in(v); },
 		}
 	}
 
 	fn rotate_in(&mut self, num: f64) {
-		for i in (0..STACK_SIZE-1).rev() {
+		for i in (0..self.nums.len()-1).rev() {
 			self.nums[i+1] = self.nums[i];
 		}
 		self.nums[0] = num;
@@ -107,7 +106,7 @@ impl Calculator {
 	fn rotate_out(&mut self, num: f64) {
 		// Duplication of the first value on the stack is intentional
 		// This is emulating the behavior of an RPN calculator I've used before
-		for i in 1..STACK_SIZE {
+		for i in 1..self.nums.len() {
 			self.nums[i-1] = self.nums[i];
 		}
 		self.nums[0] = num;
