@@ -25,18 +25,9 @@ enum EvalMode {
 	Commands, // If the buffer is a valid string command, execute it before performing the immediate, otherwise ignore
 	All, // Perform full buffer evaluation (Numbers + Commands)
 }
-impl EvalMode {
-	fn inverse(&self) -> Self {
-		match self {
-			Self::None => Self::All,
-			Self::Numbers => Self::Commands,
-			Self::Commands => Self::Numbers,
-			Self::All => Self::None,
-		}
-	}
-}
 
 // Used to change the behavior of evaluating an empty buffer
+// TODO: This should be a calculator-level config
 #[derive(Clone, Copy)]
 enum EmptyEvalBehavior {
 	None, // Perform no action
@@ -75,6 +66,10 @@ impl Default for ParserConfig {
 
 		config.immediate_cmds.insert(KeyCode::Char('N'), ParserCommand::CalcUnOp(UnOp::Neg));
 		config.immediate_cmds.insert(KeyCode::Char('C'), ParserCommand::CalcUnOp(UnOp::Pop));
+
+		config.immediate_cmds.insert(KeyCode::Char('F'), ParserCommand::CalcSto);
+		config.immediate_cmds.insert(KeyCode::Char('D'), ParserCommand::CalcDel);
+		config.immediate_cmds.insert(KeyCode::Char('R'), ParserCommand::CalcRcl);
 
 		config.string_cmds.insert("quit".into(), ParserCommand::Quit);
 
@@ -159,14 +154,29 @@ impl Parser {
 				},
 			}
 
+			let register = if self.bfr.len() == 1 {
+				Some(self.bfr[0])
+			} else {
+				None
+			};
+
 			match *inc_cmd {
 				ParserCommand::Quit => actions.push(ExternalCommand::Quit),
 
 				ParserCommand::CalcBinOp(op) => actions.push(ExternalCommand::CalcCmd(Command::BinOp(op))),
 				ParserCommand::CalcUnOp(op) => actions.push(ExternalCommand::CalcCmd(Command::UnOp(op))),
-				ParserCommand::CalcSto => {},
-				ParserCommand::CalcDel => {},
-				ParserCommand::CalcRcl => {},
+				ParserCommand::CalcSto => if let Some(c) = register {
+					self.bfr.clear();
+					actions.push(ExternalCommand::CalcCmd(Command::Sto(c)));
+				},
+				ParserCommand::CalcDel => if let Some(c) = register {
+					self.bfr.clear();
+					actions.push(ExternalCommand::CalcCmd(Command::Del(c)));
+				},
+				ParserCommand::CalcRcl => if let Some(c) = register {
+					self.bfr.clear();
+					actions.push(ExternalCommand::CalcCmd(Command::Rcl(c)));
+				},
 
 				ParserCommand::DelChar => unreachable!(),
 				ParserCommand::EvalBuf => unreachable!(),
