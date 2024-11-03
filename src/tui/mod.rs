@@ -9,7 +9,7 @@ use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 
 use crate::calculator::Calculator;
 
-use input_parser::{ParseAction, Parser};
+use input_parser::{ExternalCommand, Parser};
 
 pub struct TUI {
 	calc: Calculator,
@@ -32,7 +32,7 @@ impl TUI {
 		self.active = true;
 
 		let (mut cols, mut rows) = terminal::size()?;
-		renderer::draw(self, cols, rows)?;
+		self.draw(cols, rows)?;
 
 		'run_loop: loop {
 			match event::read()? {
@@ -40,8 +40,8 @@ impl TUI {
 					let actions = self.parser.parse(ke);
 					for action in actions {
 						match action {
-							ParseAction::Quit => break 'run_loop,
-							ParseAction::Command(cmd) => {
+							ExternalCommand::Quit => break 'run_loop,
+							ExternalCommand::CalcCmd(cmd) => {
 								self.calc.process_command(cmd);
 							},
 						}
@@ -51,7 +51,7 @@ impl TUI {
 				_ => (),
 			}
 
-			renderer::draw(self, cols, rows)?;
+			self.draw(cols, rows)?;
 		}
 
 		crossterm::execute!(out, LeaveAlternateScreen)?;

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-#[derive(Debug)]
-pub enum CalcCmd {
+#[derive(Clone, Copy, Debug)]
+pub enum Command {
 	BinOp(BinOp),
 	UnOp(UnOp),
 	Push(Option<f64>),
@@ -10,7 +10,7 @@ pub enum CalcCmd {
 	Del(char),
 	Rcl(char),
 }
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum BinOp {
 	Add,
 	Sub,
@@ -23,7 +23,7 @@ pub enum BinOp {
 	IntDiv,
 	Mod,
 }
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum UnOp {
 	Neg,
 	Sqrt,
@@ -52,10 +52,10 @@ impl Calculator {
 		}
 	}
 
-	pub fn process_command(&mut self, cmd: CalcCmd) {
+	pub fn process_command(&mut self, cmd: Command) {
 		match cmd {
 			// Stack commands
-			CalcCmd::BinOp(op) => {
+			Command::BinOp(op) => {
 				match op {
 					BinOp::Add => self.rotate_out(self.nums[1] + self.nums[0]),
 					BinOp::Sub => self.rotate_out(self.nums[1] - self.nums[0]),
@@ -73,7 +73,7 @@ impl Calculator {
 					BinOp::Mod => self.rotate_out(self.nums[1] % self.nums[0]),
 				}
 			},
-			CalcCmd::UnOp(op) => {
+			Command::UnOp(op) => {
 				match op {
 					UnOp::Neg => self.nums[0] = -self.nums[0],
 					UnOp::Sqrt => self.nums[0] = self.nums[0].sqrt(),
@@ -89,11 +89,11 @@ impl Calculator {
 					UnOp::Pop => self.rotate_out(self.nums[1]),
 				}
 			},
-			CalcCmd::Push(val) => self.rotate_in(val.unwrap_or(self.nums[0])),
+			Command::Push(val) => self.rotate_in(val.unwrap_or(self.nums[0])),
 			// Memory commands
-			CalcCmd::Sto(key) => { self.memory.insert(key, self.nums[0]); },
-			CalcCmd::Del(key) => { self.memory.remove(&key); },
-			CalcCmd::Rcl(key) => if let Some(v) = self.memory.get(&key).copied() { self.rotate_in(v); },
+			Command::Sto(key) => { self.memory.insert(key, self.nums[0]); },
+			Command::Del(key) => { self.memory.remove(&key); },
+			Command::Rcl(key) => if let Some(v) = self.memory.get(&key).copied() { self.rotate_in(v); },
 		}
 	}
 
