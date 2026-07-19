@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Clone, Copy, Debug)]
 pub enum Command {
 	BinOp(BinOp),
@@ -39,16 +41,39 @@ pub enum UnOp {
 	Pop,
 }
 
+// What should the calculator do when receiving a `Push` with no value?
+#[derive(Debug, Serialize, Deserialize)]
+enum EmptyPushBehavior {
+	None, // Ignore it
+	Zero, // Push zero
+	Last, // Push the most recent value
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CalculatorConfig {
+	empty_push_behavior: EmptyPushBehavior,
+	stack_size: usize,
+}
+impl Default for CalculatorConfig {
+	fn default() -> Self {
+		Self {
+			stack_size: 8,
+			empty_push_behavior: EmptyPushBehavior::Last,
+		}
+	}
+}
+
 #[derive(Debug)]
 pub struct Calculator {
 	pub nums: Vec<f64>,
 	pub memory: HashMap<char, f64>,
+	pub config: CalculatorConfig,
 }
 impl Calculator {
-	pub fn new(stack_size: usize) -> Calculator {
+	pub fn new(config: CalculatorConfig) -> Calculator {
 		Calculator {
-			nums: vec!(0.0; stack_size),
+			nums: vec![0.0; config.stack_size],
 			memory: HashMap::new(),
+			config,
 		}
 	}
 
@@ -57,57 +82,71 @@ impl Calculator {
 			// Stack commands
 			Command::BinOp(op) => {
 				match op {
-					BinOp::Add => self.rotate_out(self.nums[1] + self.nums[0]),
-					BinOp::Sub => self.rotate_out(self.nums[1] - self.nums[0]),
-					BinOp::Mul => self.rotate_out(self.nums[1] * self.nums[0]),
-					BinOp::Div => self.rotate_out(self.nums[1] / self.nums[0]),
-					BinOp::IntDiv => self.rotate_out((self.nums[1] / self.nums[0]) % 1.0), // TODO: Test this!
+					BinOp::Add => self.rotate_out_and_set_last(self.nums[1] + self.nums[0]),
+					BinOp::Sub => self.rotate_out_and_set_last(self.nums[1] - self.nums[0]),
+					BinOp::Mul => self.rotate_out_and_set_last(self.nums[1] * self.nums[0]),
+					BinOp::Div => self.rotate_out_and_set_last(self.nums[1] / self.nums[0]),
+					BinOp::IntDiv => self.rotate_out_and_set_last((self.nums[1] / self.nums[0]) % 1.0), // TODO: Test this!
 					BinOp::Swp => {
 						let tmp = self.nums[1];
 						self.nums[1] = self.nums[0];
 						self.nums[0] = tmp;
 					},
-					BinOp::Pow => self.rotate_out(self.nums[1].powf(self.nums[0])),
-					BinOp::Root => self.rotate_out(self.nums[1].powf(1.0 / self.nums[0])),
-					BinOp::Exp => self.rotate_out(self.nums[1] * (10.0f64).powf(self.nums[0])),
-					BinOp::Mod => self.rotate_out(self.nums[1] % self.nums[0]),
+					BinOp::Pow => self.rotate_out_and_set_last(self.nums[1].powf(self.nums[0])),
+					BinOp::Root => self.rotate_out_and_set_last(self.nums[1].powf(1.0 / self.nums[0])),
+					BinOp::Exp => self.rotate_out_and_set_last(self.nums[1] * (10.0f64).powf(self.nums[0])),
+					BinOp::Mod => self.rotate_out_and_set_last(self.nums[1] % self.nums[0]),
 				}
 			},
-			Command::UnOp(op) => {
-				match op {
-					UnOp::Neg => self.nums[0] = -self.nums[0],
-					UnOp::Sqrt => self.nums[0] = self.nums[0].sqrt(),
-					UnOp::Sqr => self.nums[0] = self.nums[0].powf(2.0),
-					UnOp::Sin => self.nums[0] = self.nums[0].sin(),
-					UnOp::Cos => self.nums[0] = self.nums[0].cos(),
-					UnOp::Tan => self.nums[0] = self.nums[0].tan(),
-					UnOp::Asin => self.nums[0] = self.nums[0].asin(),
-					UnOp::Acos => self.nums[0] = self.nums[0].acos(),
-					UnOp::Atan => self.nums[0] = self.nums[0].atan(),
-					UnOp::Rad => self.nums[0] = (self.nums[0] / 360.0) * (2.0 * PI),
-					UnOp::Deg => self.nums[0] = (self.nums[0] * 360.0) / (2.0 * PI),
-					UnOp::Pop => self.rotate_out(self.nums[1]),
-				}
+			Command::UnOp(op) => match op {
+				UnOp::Neg => self.nums[0] = -self.nums[0],
+				UnOp::Sqrt => self.nums[0] = self.nums[0].sqrt(),
+				UnOp::Sqr => self.nums[0] = self.nums[0].powf(2.0),
+				UnOp::Sin => self.nums[0] = self.nums[0].sin(),
+				UnOp::Cos => self.nums[0] = self.nums[0].cos(),
+				UnOp::Tan => self.nums[0] = self.nums[0].tan(),
+				UnOp::Asin => self.nums[0] = self.nums[0].asin(),
+				UnOp::Acos => self.nums[0] = self.nums[0].acos(),
+				UnOp::Atan => self.nums[0] = self.nums[0].atan(),
+				UnOp::Rad => self.nums[0] = (self.nums[0] / 360.0) * (2.0 * PI),
+				UnOp::Deg => self.nums[0] = (self.nums[0] * 360.0) / (2.0 * PI),
+				UnOp::Pop => self.rotate_out_and_set_last(self.nums[1]),
 			},
-			Command::Push(val) => self.rotate_in(val.unwrap_or(self.nums[0])),
+			Command::Push(val) => match val {
+				Some(v) => self.rotate_in(v),
+				None => match self.config.empty_push_behavior {
+					EmptyPushBehavior::None => (),
+					EmptyPushBehavior::Zero => self.rotate_in(0.0f64),
+					EmptyPushBehavior::Last => self.rotate_in(self.nums[0]),
+				},
+			},
 			// Memory commands
-			Command::Sto(key) => { self.memory.insert(key, self.nums[0]); },
-			Command::Del(key) => { self.memory.remove(&key); },
-			Command::Rcl(key) => if let Some(v) = self.memory.get(&key).copied() { self.rotate_in(v); },
+			Command::Sto(key) => {
+				self.memory.insert(key, self.nums[0]);
+			},
+			Command::Del(key) => {
+				self.memory.remove(&key);
+			},
+			Command::Rcl(key) => {
+				if let Some(v) = self.memory.get(&key).copied() {
+					self.rotate_in(v);
+				}
+			},
 		}
 	}
 
 	fn rotate_in(&mut self, num: f64) {
-		for i in (0..self.nums.len()-1).rev() {
-			self.nums[i+1] = self.nums[i];
+		for i in (0..self.nums.len() - 1).rev() {
+			self.nums[i + 1] = self.nums[i];
 		}
 		self.nums[0] = num;
 	}
-	fn rotate_out(&mut self, num: f64) {
+	fn rotate_out_and_set_last(&mut self, num: f64) {
 		// Duplication of the first value on the stack is intentional
 		// This is emulating the behavior of an RPN calculator I've used before
+		// TODO: Make duplication configurable
 		for i in 1..self.nums.len() {
-			self.nums[i-1] = self.nums[i];
+			self.nums[i - 1] = self.nums[i];
 		}
 		self.nums[0] = num;
 	}
