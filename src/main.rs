@@ -5,6 +5,7 @@ use calculator::{Calculator, CalculatorConfig};
 use tui::{TUIConfig, TUI};
 
 fn main() {
+	// TODO: read configs from file to create config structs
     let calc = Calculator::new(CalculatorConfig::default());
 
     let mut application = TUI::new(calc, TUIConfig::default());

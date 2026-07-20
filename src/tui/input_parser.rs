@@ -6,19 +6,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::calculator::{BinOp, Command, UnOp};
 
-#[derive(Clone, Copy)]
-enum ParserCommand {
-    Quit,
-    DelChar,
-    EvalBuf,
-
-    CalcBinOp(BinOp),
-    CalcUnOp(UnOp),
-    CalcStore,
-    CalcDelete,
-    CalcRecall,
-}
-
 // Used to change the behavior of pre-immediate buffer evaluation
 #[derive(Clone, Copy)]
 enum EvalMode {
@@ -28,11 +15,12 @@ enum EvalMode {
     All,      // Perform full buffer evaluation (Numbers + Commands)
 }
 
+// Configuration
 pub struct ParserConfig {
-    immediate_cmds: HashMap<KeyCode, ParserCommand>,
-    // TODO: Make these forced to be parser commands, as string_cmds can never be incomplete
-    string_cmds: HashMap<String, ParserCommand>,
-    imm_eval_mode: EvalMode, // How should the buffer be handled when an immediate is executed?
+    immediate_cmds: HashMap<KeyCode, ParserCommand>, // Commands that execute upon a single keypress
+    string_cmds: HashMap<String, ParserCommand>, // Commands that execute when evaluating a typed
+												 // string
+    imm_eval_mode: EvalMode, // Determines what is done with the buffer when executing an immediate
 }
 // TODO: Implement Serialize and Deserialize
 impl Serialize for ParserConfig {
@@ -188,6 +176,19 @@ impl Default for ParserConfig {
     }
 }
 
+// Actions
+#[derive(Clone, Copy)]
+enum ParserCommand {
+    Quit,
+    DelChar,
+    EvalBuf,
+
+    CalcBinOp(BinOp),
+    CalcUnOp(UnOp),
+    CalcStore,
+    CalcDelete,
+    CalcRecall,
+}
 pub enum ExternalCommand {
     Quit,
     CalcCmd(Command),

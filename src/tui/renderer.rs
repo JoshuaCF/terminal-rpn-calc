@@ -20,6 +20,7 @@ use crate::tui::TUI;
  * - Positioning of memory relative to the stack
  */
 
+// Configuration
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct Colors {
     decimal_separator: Color,
@@ -147,7 +148,7 @@ impl Widget for &TUI {
 		let main_area_parts: [Rect; 2] =
 			Layout::new(
 				RatatuiDirection::Vertical,
-				vec![Constraint::Min(self.calc.nums.len() as u16), Constraint::Percentage(100)]
+				vec![Constraint::Min(self.calc.stack.len() as u16), Constraint::Percentage(100)]
 			).areas(main_area);
 		let stack_area = main_area_parts[0];
 		let command_area = main_area_parts[1];
@@ -156,7 +157,7 @@ impl Widget for &TUI {
 		// width of 24 is not arbitrary, it permits the full 15 to 17 digits of decimal precision
 		// f64 offers as well as allowing room for decimal separator, exponent separator, and
 		// exponent digits
-		if stack_area.width < 24 || (stack_area.height as usize) < self.calc.nums.len() {
+		if stack_area.width < 24 || (stack_area.height as usize) < self.calc.stack.len() {
 			Paragraph::new("Screen too small!").wrap(Wrap { trim: true }).render(area, buf);
 			return;
 		}
@@ -165,7 +166,7 @@ impl Widget for &TUI {
         let mut stack_lines: Vec<Line> = vec![];
 
 		// Format each number per the config and insert it into stack_lines
-		for stack_value in self.calc.nums.iter().rev() {
+		for stack_value in self.calc.stack.iter().rev() {
 			stack_lines.push(Line::from(self.style_number(*stack_value, stack_area.width)));
 		}
 		Text::from(stack_lines).render(stack_area, buf);

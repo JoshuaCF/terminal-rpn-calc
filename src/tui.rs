@@ -13,11 +13,13 @@ use crate::calculator::Calculator;
 use input_parser::{ExternalCommand, Parser, ParserConfig};
 use renderer::RendererConfig;
 
+// Configuration
 #[derive(Default, Serialize, Deserialize)]
 pub struct TUIConfig {
 	renderer: RendererConfig,
 	parser: ParserConfig,
 }
+
 pub struct TUI {
 	calc: Calculator,
 	parser: Parser,
