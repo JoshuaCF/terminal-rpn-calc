@@ -1,7 +1,5 @@
 use ratatui::buffer::Buffer;
-use ratatui::layout::Alignment as RatatuiAlignment;
-use ratatui::layout::Direction as RatatuiDirection;
-use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::layout::{Alignment, Direction, Constraint, Layout, Rect};
 use ratatui::style::{Color, Styled};
 use ratatui::text::{Text, Line, Span};
 use ratatui::widgets::{Widget, Wrap, Paragraph};
@@ -21,11 +19,16 @@ use crate::tui::TUI;
  */
 
 // Configuration
+/// The colors of the various elements of the TUI.
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct Colors {
+	/// The color of the decimal separator
     decimal_separator: Color,
+	/// The color of the exponent separator (the 'e' at the end of the number)
     exponent_separator: Color,
+	/// The color of the digits in the number
     number: Color,
+	/// The color of the key labels for memory
     memory_key: Color,
 }
 impl Default for Colors {
@@ -39,54 +42,77 @@ impl Default for Colors {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
+/// Defines the relative positions of the stack and memory areas.
+#[derive(Default, Serialize, Deserialize, Clone, Copy)]
+pub enum Orientation {
+	/// Stack on the bottom, memory on the top
+    StackBottom,
+	/// Stack on the top, memory on the bottom
+    StackTop,
+	/// Stack on the right, memory on the left
+    StackRight,
+	/// Stack on the left, memory on the right
+	#[default]
+    StackLeft,
 }
-impl Default for Direction {
-    fn default() -> Self {
-        Direction::Right
-    }
-}
-impl From<Direction> for RatatuiDirection {
-    fn from(v: Direction) -> Self {
+// For easy conversion into a layout direction
+impl From<Orientation> for Direction {
+    fn from(v: Orientation) -> Self {
         match v {
-            Direction::Up | Direction::Down => RatatuiDirection::Vertical,
-            Direction::Left | Direction::Right => RatatuiDirection::Horizontal,
+            Orientation::StackBottom | Orientation::StackTop => Direction::Vertical,
+            Orientation::StackRight | Orientation::StackLeft => Direction::Horizontal,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
-pub enum Alignment {
+/// The text alignment of numbers on the stack.
+#[derive(Default, Serialize, Deserialize, Clone, Copy)]
+pub enum StackAlignment {
+	#[default]
+	/// Align numbers left
     Left,
+	/// Align numbers right
     Right,
 }
-impl Default for Alignment {
-    fn default() -> Self {
-        Alignment::Left
-    }
-}
-impl From<Alignment> for RatatuiAlignment {
-    fn from(v: Alignment) -> Self {
+impl From<StackAlignment> for Alignment {
+    fn from(v: StackAlignment) -> Self {
         match v {
-            Alignment::Left => RatatuiAlignment::Left,
-            Alignment::Right => RatatuiAlignment::Right,
+            StackAlignment::Left => Alignment::Left,
+            StackAlignment::Right => Alignment::Right,
         }
     }
 }
 
+/// The text alignment of numbers in memory.
+///
+/// Due to memory having both a key and the value to worry about, there are three ways to align the
+/// memory text. Both the keys and values can be left aligned, the keys can be left and the values
+/// right, or both can be right.
+#[derive(Default, Serialize, Deserialize, Clone, Copy)]
+pub enum MemoryAlignment {
+	/// Align keys and numbers left
+	AllLeft,
+	/// Align keys left and numbers right
+	#[default]
+	SplitMiddle,
+	/// Align keys and numbers right
+	AllRight,
+}
+
+/// Stores all of the configuration values for the renderer.
 #[derive(Default, Serialize, Deserialize)]
 pub struct RendererConfig {
-    colors: Colors,
-    alignment: Alignment,
-    memory_location: Direction,
+    pub colors: Colors,
+    pub stack_alignment: StackAlignment,
+	pub memory_alignment: MemoryAlignment,
+    pub memory_location: Orientation,
 }
 
 impl TUI {
+	/// Converts an [`f64`] into [`Span`]s representing the number with the styling provided in the
+	/// TUI's configuration. This could then be used to insert into a [`Line`], or be further
+	/// manipulated. Each contiguous sequence of digits will be one span, and the decimal and
+	/// exponent separators will have their own spans dedicated to those characters.
 	fn style_number<'a>(&self, number: f64, width: u16) -> Vec<Span<'a>> {
 		// First try doing a plain format
 		// If too long, then try exponential with precision of WIDTH-3 (decimal separator, e, and
@@ -141,13 +167,13 @@ impl Widget for &TUI {
 
         let areas: [Rect; 2] = layout.areas(area);
         let (main_area, memory_area) = match self.config.renderer.memory_location {
-            Direction::Right | Direction::Down => (areas[0], areas[1]),
-            Direction::Left | Direction::Up => (areas[1], areas[0]),
+            Orientation::StackLeft | Orientation::StackTop => (areas[0], areas[1]),
+            Orientation::StackRight | Orientation::StackBottom => (areas[1], areas[0]),
         };
 
 		let main_area_parts: [Rect; 2] =
 			Layout::new(
-				RatatuiDirection::Vertical,
+				Direction::Vertical,
 				vec![Constraint::Min(self.calc.stack.len() as u16), Constraint::Percentage(100)]
 			).areas(main_area);
 		let stack_area = main_area_parts[0];

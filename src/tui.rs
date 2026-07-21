@@ -16,8 +16,8 @@ use renderer::RendererConfig;
 // Configuration
 #[derive(Default, Serialize, Deserialize)]
 pub struct TUIConfig {
-	renderer: RendererConfig,
-	parser: ParserConfig,
+	pub renderer: RendererConfig,
+	pub parser: ParserConfig,
 }
 
 pub struct TUI {

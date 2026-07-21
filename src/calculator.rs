@@ -26,14 +26,14 @@ impl Default for CalculatorConfig {
 }
 
 // Actions
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum Command {
 	BinOp(BinOp),
 	UnOp(UnOp),
 	Push(Option<f64>),
-	Sto(char),
-	Del(char),
-	Rcl(char),
+	Sto(String),
+	Del(String),
+	Rcl(String),
 }
 #[derive(Clone, Copy, Debug)]
 pub enum BinOp {
@@ -67,8 +67,7 @@ pub enum UnOp {
 #[derive(Debug)]
 pub struct Calculator {
 	pub stack: Vec<f64>,
-	// TODO: there's really no reason this has to be 'char', it could be strings
-	pub memory: HashMap<char, f64>,
+	pub memory: HashMap<String, f64>,
 	pub config: CalculatorConfig,
 }
 impl Calculator {
