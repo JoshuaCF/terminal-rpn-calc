@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 /// Determines the calculator's behavior when receiving a push command with no content.
 #[derive(Default, Debug, Serialize, Deserialize)]
 enum EmptyPushBehavior {
-	/// Ignore it
+	/// Ignore it.
 	None,
-	/// Push zero
+	/// Push zero.
 	Zero,
-	/// Push the most recent value
+	/// Push the most recent value.
 	#[default]
 	Last,
 }
@@ -33,45 +33,45 @@ impl Default for CalculatorConfig {
 /// Top-level grouping of actions the calculator can take.
 #[derive(Clone, Debug)]
 pub enum Command {
-	/// Perform an operation involving the bottom two values of the stack
+	/// Perform an operation involving the bottom two values of the stack.
 	BinOp(BinOp),
-	/// Perform an operation involving the bottom value of the stack
+	/// Perform an operation involving the bottom value of the stack.
 	UnOp(UnOp),
-	/// Push a value onto the stack. Behavior in the case of `None` determined by config
+	/// Push a value onto the stack. Behavior in the case of `None` determined by config.
 	Push(Option<f64>),
-	/// Store a value into memory
+	/// Store a value into memory.
 	Sto(String),
-	/// Delete a value from memory
+	/// Delete a value from memory.
 	Del(String),
-	/// Push a value from memory onto the stack
+	/// Push a value from memory onto the stack.
 	Rcl(String),
 }
 /// Operations involving the bottom two values on the stack.
 ///
-/// All operations here (except `BinOp::Swp`) will remove the bottom two values from the stack and push the result of the
+/// All operations here (except [`BinOp::Swp`]) will remove the bottom two values from the stack and push the result of the
 /// operation onto the stack.
 #[derive(Clone, Copy, Debug)]
 pub enum BinOp {
-	/// Add the bottom two values together
+	/// Add the bottom two values together.
 	Add,
-	/// Subtract the bottom value from the second-bottom value
+	/// Subtract the bottom value from the second-bottom value.
 	Sub,
-	/// Multiply the bottom two values together
+	/// Multiply the bottom two values together.
 	Mul,
-	/// Divide the second-bottom value on the stack by the bottom value on the stack
+	/// Divide the second-bottom value on the stack by the bottom value on the stack.
 	Div,
-	/// Swap the bottom two values of the stack
+	/// Swap the bottom two values of the stack.
 	Swp,
-	/// Raise the bottom value of the stack to the power of the second-bottom value
+	/// Raise the bottom value of the stack to the power of the second-bottom value.
 	Pow,
-	/// Raise the bottom value of the stack to the power of the one over the second-bottom value
+	/// Raise the bottom value of the stack to the power of the one over the second-bottom value.
 	Root,
 	/// Raise 10 to the power of the bottom value of the stack, then multiply that with the
-	/// second-bottom value
+	/// second-bottom value.
 	Exp, // 10^x
-	/// Like `BinOp::Div`, but uses euclidean division instead
+	/// Like `BinOp::Div`, but uses [euclidean division]() instead.
 	IntDiv,
-	/// Computes the second-bottom value of the stack modulo the bottom value of the stack
+	/// Computes the second-bottom value of the stack modulo the bottom value of the stack.
 	Mod,
 }
 /// Operations involving only the bottom value of the stack.
@@ -79,29 +79,29 @@ pub enum BinOp {
 /// All trigonometric functions assume the input is in radians.
 #[derive(Clone, Copy, Debug)]
 pub enum UnOp {
-	/// Multiply the bottom value by -1
+	/// Multiply the bottom value by -1.
 	Neg,
-	/// Compute the square root of the bottom value
+	/// Compute the square root of the bottom value.
 	Sqrt,
-	/// Square the bottom value
+	/// Square the bottom value.
 	Sqr,
-	/// Compute the sine of the bottom value
+	/// Compute the sine of the bottom value.
 	Sin,
-	/// Compute the cosine of the bottom value
+	/// Compute the cosine of the bottom value.
 	Cos,
-	/// Compute the tangent of the bottom value
+	/// Compute the tangent of the bottom value.
 	Tan,
-	/// Compute the arcsin of the bottom value
+	/// Compute the arcsin of the bottom value.
 	Asin,
-	/// Compute the arccosine of the bottom value
+	/// Compute the arccosine of the bottom value.
 	Acos,
-	/// Compute the arctangent of the bottom value
+	/// Compute the arctangent of the bottom value.
 	Atan,
-	/// Convert the bottom value from degrees to radians
+	/// Convert the bottom value from degrees to radians.
 	Rad,
-	/// Convert the bottom value from radians to degrees
+	/// Convert the bottom value from radians to degrees.
 	Deg,
-	/// Remove the bottom value of the stack
+	/// Remove the bottom value of the stack.
 	Pop,
 }
 
@@ -123,29 +123,27 @@ impl Calculator {
 	pub fn process_command(&mut self, cmd: Command) {
 		match cmd {
 			// Stack commands
-			Command::BinOp(op) => {
-				match op {
-					BinOp::Add => self.rotate_out_and_set_last(self.stack[1] + self.stack[0]),
-					BinOp::Sub => self.rotate_out_and_set_last(self.stack[1] - self.stack[0]),
-					BinOp::Mul => self.rotate_out_and_set_last(self.stack[1] * self.stack[0]),
-					BinOp::Div => self.rotate_out_and_set_last(self.stack[1] / self.stack[0]),
-					BinOp::IntDiv => {
-						self.rotate_out_and_set_last(self.stack[1].div_euclid(self.stack[0]))
-					},
-					BinOp::Swp => {
-						let tmp = self.stack[1];
-						self.stack[1] = self.stack[0];
-						self.stack[0] = tmp;
-					},
-					BinOp::Pow => self.rotate_out_and_set_last(self.stack[1].powf(self.stack[0])),
-					BinOp::Root => {
-						self.rotate_out_and_set_last(self.stack[1].powf(1.0 / self.stack[0]))
-					},
-					BinOp::Exp => {
-						self.rotate_out_and_set_last(self.stack[1] * (10.0f64).powf(self.stack[0]))
-					},
-					BinOp::Mod => self.rotate_out_and_set_last(self.stack[1] % self.stack[0]),
-				}
+			Command::BinOp(op) => match op {
+				BinOp::Add => self.rotate_out_and_set_last(self.stack[1] + self.stack[0]),
+				BinOp::Sub => self.rotate_out_and_set_last(self.stack[1] - self.stack[0]),
+				BinOp::Mul => self.rotate_out_and_set_last(self.stack[1] * self.stack[0]),
+				BinOp::Div => self.rotate_out_and_set_last(self.stack[1] / self.stack[0]),
+				BinOp::IntDiv => {
+					self.rotate_out_and_set_last(self.stack[1].div_euclid(self.stack[0]))
+				},
+				BinOp::Swp => {
+					let tmp = self.stack[1];
+					self.stack[1] = self.stack[0];
+					self.stack[0] = tmp;
+				},
+				BinOp::Pow => self.rotate_out_and_set_last(self.stack[1].powf(self.stack[0])),
+				BinOp::Root => {
+					self.rotate_out_and_set_last(self.stack[1].powf(1.0 / self.stack[0]))
+				},
+				BinOp::Exp => {
+					self.rotate_out_and_set_last(self.stack[1] * (10.0f64).powf(self.stack[0]))
+				},
+				BinOp::Mod => self.rotate_out_and_set_last(self.stack[1] % self.stack[0]),
 			},
 			Command::UnOp(op) => match op {
 				UnOp::Neg => self.stack[0] = -self.stack[0],

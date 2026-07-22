@@ -22,13 +22,13 @@ use crate::tui::TUI;
 /// The colors of the various elements of the TUI.
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct Colors {
-	/// The color of the decimal separator
+	/// The color of the decimal separator.
 	decimal_separator: Color,
-	/// The color of the exponent separator (the 'e' at the end of the number)
+	/// The color of the exponent separator (the 'e' at the end of the number).
 	exponent_separator: Color,
-	/// The color of the digits in the number
+	/// The color of the digits in the number.
 	number: Color,
-	/// The color of the key labels for memory
+	/// The color of the key labels for memory.
 	memory_key: Color,
 }
 impl Default for Colors {
@@ -45,13 +45,13 @@ impl Default for Colors {
 /// Defines the relative positions of the stack and memory areas.
 #[derive(Default, Serialize, Deserialize, Clone, Copy)]
 pub enum Orientation {
-	/// Stack on the bottom, memory on the top
+	/// Stack on the bottom, memory on the top.
 	StackBottom,
-	/// Stack on the top, memory on the bottom
+	/// Stack on the top, memory on the bottom.
 	StackTop,
-	/// Stack on the right, memory on the left
+	/// Stack on the right, memory on the left.
 	StackRight,
-	/// Stack on the left, memory on the right
+	/// Stack on the left, memory on the right.
 	#[default]
 	StackLeft,
 }
@@ -69,9 +69,9 @@ impl From<Orientation> for Direction {
 #[derive(Default, Serialize, Deserialize, Clone, Copy)]
 pub enum StackAlignment {
 	#[default]
-	/// Align numbers left
+	/// Align numbers left.
 	Left,
-	/// Align numbers right
+	/// Align numbers right.
 	Right,
 }
 impl From<StackAlignment> for Alignment {
@@ -90,12 +90,12 @@ impl From<StackAlignment> for Alignment {
 /// right, or both can be right.
 #[derive(Default, Serialize, Deserialize, Clone, Copy)]
 pub enum MemoryAlignment {
-	/// Align keys and numbers left
+	/// Align keys and numbers left.
 	AllLeft,
-	/// Align keys left and numbers right
+	/// Align keys left and numbers right.
 	#[default]
 	SplitMiddle,
-	/// Align keys and numbers right
+	/// Align keys and numbers right.
 	AllRight,
 }
 

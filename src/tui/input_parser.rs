@@ -13,14 +13,14 @@ use crate::calculator::{BinOp, Command, UnOp};
 /// Used to change the behavior of pre-immediate buffer evaluation.
 #[derive(Serialize, Deserialize, Clone, Copy, Default)]
 pub enum EvalMode {
-	/// Do nothing with the buffer
+	/// Do nothing with the buffer.
 	None,
-	/// If the buffer is a valid f64, push the number before executing, otherwise ignore
+	/// If the buffer is a valid f64, push the number before executing, otherwise ignore.
 	#[default]
 	Numbers,
-	/// If the buffer is a valid string command, execute it before performing the immediate, otherwise ignore
+	/// If the buffer is a valid string command, execute it before performing the immediate, otherwise ignore.
 	Commands,
-	/// Perform full buffer evaluation (Numbers + Commands)
+	/// Perform full buffer evaluation (Numbers + Commands).
 	All,
 }
 
@@ -28,7 +28,7 @@ pub enum EvalMode {
 /// Keybinds which execute an operation as soon as they're detected, as contrasted with entering the
 /// buffer.
 ///
-/// This is just a wrapper for `HashMap<KeyCode, ParserCommand>` which is needed to implement custom
+/// This is just a wrapper for [`HashMap<KeyCode, ParserCommand>`] which is needed to implement custom
 /// serialization and deserialization due to the [toml] crate not supporting hashmaps with
 /// non-string keys.
 pub struct ImmediateCmdConfig(HashMap<KeyCode, ParserCommand>);
@@ -116,11 +116,11 @@ impl<'de> Deserialize<'de> for ImmediateCmdConfig {
 /// Configuration for keybinds and commands.
 #[derive(Serialize, Deserialize)]
 pub struct ParserConfig {
-	/// Commands that execute upon a single keypress
+	/// Commands that execute upon a single keypress.
 	pub immediate_cmds: ImmediateCmdConfig,
-	/// Commands that execute when evaluating a typed string
+	/// Commands that execute when evaluating a typed string.
 	pub string_cmds: HashMap<String, ParserCommand>,
-	/// Determines what is done with the buffer when executing an immediate
+	/// Determines what is done with the buffer when executing an immediate.
 	pub imm_eval_mode: EvalMode,
 }
 impl Default for ParserConfig {
@@ -187,29 +187,29 @@ impl Default for ParserConfig {
 /// Various actions the user can take.
 #[derive(Clone, Copy, Debug)]
 pub enum ParserCommand {
-	/// Exit the program
+	/// Exit the program.
 	Quit,
-	/// Remove the last character in the buffer
+	/// Remove the last character in the buffer.
 	DelChar,
-	/// Evaluate the contents of the buffer and clear it
+	/// Evaluate the contents of the buffer and clear it.
 	EvalBuf,
 
-	/// An operation involving the bottom two values on the stack
+	/// An operation involving the bottom two values on the stack.
 	CalcBinOp(BinOp),
-	/// An operation involving the bottom value of the stack
+	/// An operation involving the bottom value of the stack.
 	CalcUnOp(UnOp),
-	/// Store a value into memory
+	/// Store a value into memory.
 	CalcStore,
-	/// Remove a value from memory
+	/// Remove a value from memory.
 	CalcDelete,
-	/// Push a value from memory onto the stack
+	/// Push a value from memory onto the stack.
 	CalcRecall,
 }
 // Deriving serialize/deserialize maps the data structure in a dissatisfactory manner due to nesting
 // the binary and unary operations. There's an attribute from serde which should fix this, but it
 // didn't seem to be working so here's the manual implementation.
 impl ParserCommand {
-	/// Name of the enum for (de)serialization
+	/// Name of the enum for (de)serialization.
 	fn enum_name() -> &'static str {
 		"ParserCommand"
 	}
@@ -357,7 +357,7 @@ impl<'de> Deserialize<'de> for ParserCommand {
 	}
 }
 
-/// A flattened representation of `ParserCommand`s without any data.
+/// A flattened representation of [`ParserCommand`]s without any data.
 #[derive(Clone, Copy, Debug)]
 pub enum ParserCommandVariant {
 	Quit,
@@ -390,7 +390,7 @@ pub enum ParserCommandVariant {
 	CalcRecall,
 }
 impl ParserCommandVariant {
-	/// Array of all variant names for (de)serialization hints
+	/// Array of all variant names for (de)serialization hints.
 	const ALL_NAMES: &'static [&'static str] = &[
 		Self::QUIT,
 		Self::DEL_CHAR,
@@ -451,7 +451,7 @@ impl ParserCommandVariant {
 	const CALC_DELETE: &'static str = "CalcDelete";
 	const CALC_RECALL: &'static str = "CalcRecall";
 
-	/// Name of a variant for (de)serialization
+	/// Name of a variant for (de)serialization.
 	const fn name(self) -> &'static str {
 		match self {
 			Self::Quit => Self::QUIT,
@@ -485,7 +485,7 @@ impl ParserCommandVariant {
 		}
 	}
 
-	/// Index of a variant for (de)serialization
+	/// Index of a variant for (de)serialization.
 	const fn index(self) -> u32 {
 		// NOTE: I've tried to avoid duplicating constant values like this, but seeing as these
 		// indices should only need to be duped to one other location, deduping would just bloat the
@@ -523,7 +523,7 @@ impl ParserCommandVariant {
 		}
 	}
 }
-/// Attempts to recover a variant from its index
+/// Attempts to recover a variant from its index.
 impl TryFrom<u32> for ParserCommandVariant {
 	type Error = ();
 
@@ -563,7 +563,7 @@ impl TryFrom<u32> for ParserCommandVariant {
 		}
 	}
 }
-/// Attempts to recover a variant from its name
+/// Attempts to recover a variant from its name.
 impl TryFrom<&str> for ParserCommandVariant {
 	type Error = ();
 
@@ -601,7 +601,7 @@ impl TryFrom<&str> for ParserCommandVariant {
 		}
 	}
 }
-/// Gets the corresponding `ParserCommandVariant` of a `ParserCommand`
+/// Gets the corresponding [`ParserCommandVariant`] of a [`ParserCommand`].
 impl From<ParserCommand> for ParserCommandVariant {
 	fn from(value: ParserCommand) -> Self {
 		match value {
@@ -638,8 +638,8 @@ impl From<ParserCommand> for ParserCommandVariant {
 }
 // TryFrom chosen here in the chance that commands eventually have data attached to them. The
 // conversion will only be able to handle the unit variants.
-/// Attempts to recreate a `ParserCommand` from a variant. Will only work for unit enums of
-/// `ParserCommand`.
+/// Attempts to recreate a [`ParserCommand`] from a variant. Will only work for unit enums of
+/// [`ParserCommand`].
 impl TryFrom<ParserCommandVariant> for ParserCommand {
 	type Error = ();
 
