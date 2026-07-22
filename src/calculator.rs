@@ -4,12 +4,16 @@ use std::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 
 // Configuration
-// What should the calculator do when receiving a `Push` with no value?
-#[derive(Debug, Serialize, Deserialize)]
+/// Determines the calculator's behavior when receiving a push command with no content.
+#[derive(Default, Debug, Serialize, Deserialize)]
 enum EmptyPushBehavior {
-	None, // Ignore it
-	Zero, // Push zero
-	Last, // Push the most recent value
+	/// Ignore it
+	None,
+	/// Push zero
+	Zero,
+	/// Push the most recent value
+	#[default]
+	Last,
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CalculatorConfig {
@@ -20,47 +24,84 @@ impl Default for CalculatorConfig {
 	fn default() -> Self {
 		Self {
 			stack_size: 8,
-			empty_push_behavior: EmptyPushBehavior::Last,
+			empty_push_behavior: EmptyPushBehavior::default(),
 		}
 	}
 }
 
 // Actions
+/// Top-level grouping of actions the calculator can take.
 #[derive(Clone, Debug)]
 pub enum Command {
+	/// Perform an operation involving the bottom two values of the stack
 	BinOp(BinOp),
+	/// Perform an operation involving the bottom value of the stack
 	UnOp(UnOp),
+	/// Push a value onto the stack. Behavior in the case of `None` determined by config
 	Push(Option<f64>),
+	/// Store a value into memory
 	Sto(String),
+	/// Delete a value from memory
 	Del(String),
+	/// Push a value from memory onto the stack
 	Rcl(String),
 }
+/// Operations involving the bottom two values on the stack.
+///
+/// All operations here (except `BinOp::Swp`) will remove the bottom two values from the stack and push the result of the
+/// operation onto the stack.
 #[derive(Clone, Copy, Debug)]
 pub enum BinOp {
+	/// Add the bottom two values together
 	Add,
+	/// Subtract the bottom value from the second-bottom value
 	Sub,
+	/// Multiply the bottom two values together
 	Mul,
+	/// Divide the second-bottom value on the stack by the bottom value on the stack
 	Div,
+	/// Swap the bottom two values of the stack
 	Swp,
+	/// Raise the bottom value of the stack to the power of the second-bottom value
 	Pow,
+	/// Raise the bottom value of the stack to the power of the one over the second-bottom value
 	Root,
+	/// Raise 10 to the power of the bottom value of the stack, then multiply that with the
+	/// second-bottom value
 	Exp, // 10^x
+	/// Like `BinOp::Div`, but uses euclidean division instead
 	IntDiv,
+	/// Computes the second-bottom value of the stack modulo the bottom value of the stack
 	Mod,
 }
+/// Operations involving only the bottom value of the stack.
+///
+/// All trigonometric functions assume the input is in radians.
 #[derive(Clone, Copy, Debug)]
 pub enum UnOp {
+	/// Multiply the bottom value by -1
 	Neg,
+	/// Compute the square root of the bottom value
 	Sqrt,
+	/// Square the bottom value
 	Sqr,
+	/// Compute the sine of the bottom value
 	Sin,
+	/// Compute the cosine of the bottom value
 	Cos,
+	/// Compute the tangent of the bottom value
 	Tan,
+	/// Compute the arcsin of the bottom value
 	Asin,
+	/// Compute the arccosine of the bottom value
 	Acos,
+	/// Compute the arctangent of the bottom value
 	Atan,
+	/// Convert the bottom value from degrees to radians
 	Rad,
+	/// Convert the bottom value from radians to degrees
 	Deg,
+	/// Remove the bottom value of the stack
 	Pop,
 }
 
@@ -89,8 +130,8 @@ impl Calculator {
 					BinOp::Mul => self.rotate_out_and_set_last(self.stack[1] * self.stack[0]),
 					BinOp::Div => self.rotate_out_and_set_last(self.stack[1] / self.stack[0]),
 					BinOp::IntDiv => {
-						self.rotate_out_and_set_last((self.stack[1] / self.stack[0]) % 1.0)
-					}, // TODO: Test this!
+						self.rotate_out_and_set_last(self.stack[1].div_euclid(self.stack[0]))
+					},
 					BinOp::Swp => {
 						let tmp = self.stack[1];
 						self.stack[1] = self.stack[0];

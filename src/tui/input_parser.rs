@@ -32,6 +32,7 @@ pub enum EvalMode {
 /// serialization and deserialization due to the [toml] crate not supporting hashmaps with
 /// non-string keys.
 pub struct ImmediateCmdConfig(HashMap<KeyCode, ParserCommand>);
+// From impls for making the wrapper more transparent
 impl From<HashMap<KeyCode, ParserCommand>> for ImmediateCmdConfig {
 	fn from(value: HashMap<KeyCode, ParserCommand>) -> Self {
 		Self(value)
@@ -51,6 +52,7 @@ impl Serialize for ImmediateCmdConfig {
 
 		for (key, value) in self.0.iter() {
 			match key {
+				// TODO: support more keys
 				KeyCode::Char(c) => map_serializer.serialize_entry(&c.to_string(), value)?,
 				KeyCode::Enter => map_serializer.serialize_entry("enter", value)?,
 				KeyCode::Backspace => map_serializer.serialize_entry("backspace", value)?,
@@ -85,6 +87,7 @@ impl<'de> Deserialize<'de> for ImmediateCmdConfig {
 					access.next_entry::<String, ParserCommand>()?
 				{
 					let key = match key_string.as_str() {
+						// TODO: support more keys
 						"enter" => KeyCode::Enter,
 						"backspace" => KeyCode::Backspace,
 						"delete" => KeyCode::Delete,
@@ -126,7 +129,6 @@ impl Default for ParserConfig {
 		let mut string_cmds = HashMap::new();
 		let imm_eval_mode = EvalMode::default();
 
-		// TODO: literally all of this needs to be configurable
 		immediate_cmds.insert(KeyCode::Enter, ParserCommand::EvalBuf);
 		immediate_cmds.insert(KeyCode::Backspace, ParserCommand::DelChar);
 		immediate_cmds.insert(KeyCode::Delete, ParserCommand::DelChar);
@@ -182,25 +184,36 @@ impl Default for ParserConfig {
 }
 
 // Actions
+/// Various actions the user can take.
 #[derive(Clone, Copy, Debug)]
 pub enum ParserCommand {
+	/// Exit the program
 	Quit,
+	/// Remove the last character in the buffer
 	DelChar,
+	/// Evaluate the contents of the buffer and clear it
 	EvalBuf,
 
+	/// An operation involving the bottom two values on the stack
 	CalcBinOp(BinOp),
+	/// An operation involving the bottom value of the stack
 	CalcUnOp(UnOp),
+	/// Store a value into memory
 	CalcStore,
+	/// Remove a value from memory
 	CalcDelete,
+	/// Push a value from memory onto the stack
 	CalcRecall,
 }
+// Deriving serialize/deserialize maps the data structure in a dissatisfactory manner due to nesting
+// the binary and unary operations. There's an attribute from serde which should fix this, but it
+// didn't seem to be working so here's the manual implementation.
 impl ParserCommand {
 	/// Name of the enum for (de)serialization
 	fn enum_name() -> &'static str {
 		"ParserCommand"
 	}
 }
-// Deriving serialize/deserialize maps the data structure in a dissatisfactory manner
 impl Serialize for ParserCommand {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 	where
@@ -344,6 +357,7 @@ impl<'de> Deserialize<'de> for ParserCommand {
 	}
 }
 
+/// A flattened representation of `ParserCommand`s without any data.
 #[derive(Clone, Copy, Debug)]
 pub enum ParserCommandVariant {
 	Quit,
@@ -376,6 +390,7 @@ pub enum ParserCommandVariant {
 	CalcRecall,
 }
 impl ParserCommandVariant {
+	/// Array of all variant names for (de)serialization hints
 	const ALL_NAMES: &'static [&'static str] = &[
 		Self::QUIT,
 		Self::DEL_CHAR,
@@ -508,6 +523,7 @@ impl ParserCommandVariant {
 		}
 	}
 }
+/// Attempts to recover a variant from its index
 impl TryFrom<u32> for ParserCommandVariant {
 	type Error = ();
 
@@ -547,6 +563,7 @@ impl TryFrom<u32> for ParserCommandVariant {
 		}
 	}
 }
+/// Attempts to recover a variant from its name
 impl TryFrom<&str> for ParserCommandVariant {
 	type Error = ();
 
@@ -584,6 +601,7 @@ impl TryFrom<&str> for ParserCommandVariant {
 		}
 	}
 }
+/// Gets the corresponding `ParserCommandVariant` of a `ParserCommand`
 impl From<ParserCommand> for ParserCommandVariant {
 	fn from(value: ParserCommand) -> Self {
 		match value {
@@ -620,6 +638,8 @@ impl From<ParserCommand> for ParserCommandVariant {
 }
 // TryFrom chosen here in the chance that commands eventually have data attached to them. The
 // conversion will only be able to handle the unit variants.
+/// Attempts to recreate a `ParserCommand` from a variant. Will only work for unit enums of
+/// `ParserCommand`.
 impl TryFrom<ParserCommandVariant> for ParserCommand {
 	type Error = ();
 
@@ -657,6 +677,9 @@ impl TryFrom<ParserCommandVariant> for ParserCommand {
 	}
 }
 
+// This struct is defined top-level in the file as its functions are used in the visitor for
+// `ParserCommand`s. Switching to `DeserializeSeed` for `ParserCommand` may remove the need for
+// this.
 struct ParserCommandVariantVisitor;
 impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 	type Value = ParserCommandVariant;
@@ -755,11 +778,14 @@ impl<'de> Deserialize<'de> for ParserCommandVariant {
 	}
 }
 
+/// Commands that affect the state of structs the parser does not have direct access to.
 pub enum ExternalCommand {
 	Quit,
 	CalcCmd(Command),
 }
 
+/// Handles input events and determines the action that should result from them and maintains an
+/// input buffer.
 pub struct Parser {
 	pub bfr: Vec<char>,
 	pub config: ParserConfig,
