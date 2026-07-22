@@ -16,10 +16,10 @@ fn main() {
 	// TODO: read configs from file to create config structs
 	let config = Config::default();
 
-    let calc = Calculator::new(config.calc);
+	let calc = Calculator::new(config.calc);
 
-    let mut application = TUI::new(calc, config.tui);
-    // TODO: `unwrap` should not be used, the return should be looked at and an appropriate error
-    // printed where applicable
-    application.run().unwrap();
+	let mut application = TUI::new(calc, config.tui);
+	// TODO: `unwrap` should not be used, the return should be looked at and an appropriate error
+	// printed where applicable
+	application.run().unwrap();
 }

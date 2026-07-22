@@ -88,15 +88,21 @@ impl Calculator {
 					BinOp::Sub => self.rotate_out_and_set_last(self.stack[1] - self.stack[0]),
 					BinOp::Mul => self.rotate_out_and_set_last(self.stack[1] * self.stack[0]),
 					BinOp::Div => self.rotate_out_and_set_last(self.stack[1] / self.stack[0]),
-					BinOp::IntDiv => self.rotate_out_and_set_last((self.stack[1] / self.stack[0]) % 1.0), // TODO: Test this!
+					BinOp::IntDiv => {
+						self.rotate_out_and_set_last((self.stack[1] / self.stack[0]) % 1.0)
+					}, // TODO: Test this!
 					BinOp::Swp => {
 						let tmp = self.stack[1];
 						self.stack[1] = self.stack[0];
 						self.stack[0] = tmp;
 					},
 					BinOp::Pow => self.rotate_out_and_set_last(self.stack[1].powf(self.stack[0])),
-					BinOp::Root => self.rotate_out_and_set_last(self.stack[1].powf(1.0 / self.stack[0])),
-					BinOp::Exp => self.rotate_out_and_set_last(self.stack[1] * (10.0f64).powf(self.stack[0])),
+					BinOp::Root => {
+						self.rotate_out_and_set_last(self.stack[1].powf(1.0 / self.stack[0]))
+					},
+					BinOp::Exp => {
+						self.rotate_out_and_set_last(self.stack[1] * (10.0f64).powf(self.stack[0]))
+					},
 					BinOp::Mod => self.rotate_out_and_set_last(self.stack[1] % self.stack[0]),
 				}
 			},

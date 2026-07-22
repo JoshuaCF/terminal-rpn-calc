@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 
-use serde::{Deserialize, Serialize, Serializer, Deserializer};
-use serde::ser::Error as SerError;
-use serde::ser::{SerializeMap};
 use serde::de::Error as DeError;
-use serde::de::{VariantAccess, Unexpected, Visitor, MapAccess};
+use serde::de::{Unexpected, VariantAccess, Visitor};
+use serde::ser::Error as SerError;
+use serde::ser::SerializeMap;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::calculator::{BinOp, Command, UnOp};
 
@@ -14,14 +14,14 @@ use crate::calculator::{BinOp, Command, UnOp};
 #[derive(Serialize, Deserialize, Clone, Copy, Default)]
 pub enum EvalMode {
 	/// Do nothing with the buffer
-    None,
+	None,
 	/// If the buffer is a valid f64, push the number before executing, otherwise ignore
 	#[default]
-    Numbers,
+	Numbers,
 	/// If the buffer is a valid string command, execute it before performing the immediate, otherwise ignore
-    Commands,
+	Commands,
 	/// Perform full buffer evaluation (Numbers + Commands)
-    All,
+	All,
 }
 
 // Configuration
@@ -34,18 +34,18 @@ pub enum EvalMode {
 pub struct ImmediateCmdConfig(HashMap<KeyCode, ParserCommand>);
 impl From<HashMap<KeyCode, ParserCommand>> for ImmediateCmdConfig {
 	fn from(value: HashMap<KeyCode, ParserCommand>) -> Self {
-	    Self(value)
+		Self(value)
 	}
 }
 impl From<ImmediateCmdConfig> for HashMap<KeyCode, ParserCommand> {
 	fn from(value: ImmediateCmdConfig) -> Self {
-	    value.0
+		value.0
 	}
 }
 impl Serialize for ImmediateCmdConfig {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 	where
-	    S: serde::Serializer
+		S: serde::Serializer,
 	{
 		let mut map_serializer = serializer.serialize_map(None)?;
 
@@ -65,23 +65,25 @@ impl Serialize for ImmediateCmdConfig {
 impl<'de> Deserialize<'de> for ImmediateCmdConfig {
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 	where
-	    D: serde::Deserializer<'de>
+		D: serde::Deserializer<'de>,
 	{
 		struct ImmediateCmdConfigVisitor;
 		impl<'de> Visitor<'de> for ImmediateCmdConfigVisitor {
 			type Value = ImmediateCmdConfig;
 
 			fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-			    write!(formatter, "a map of characters or key names to actions")
+				write!(formatter, "a map of characters or key names to actions")
 			}
 
 			fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>
 			where
-			    A: serde::de::MapAccess<'de>,
+				A: serde::de::MapAccess<'de>,
 			{
-			    let mut map = HashMap::new();
+				let mut map = HashMap::new();
 
-				while let Some((key_string, value)) = access.next_entry::<String, ParserCommand>()? {
+				while let Some((key_string, value)) =
+					access.next_entry::<String, ParserCommand>()?
+				{
 					let key = match key_string.as_str() {
 						"enter" => KeyCode::Enter,
 						"backspace" => KeyCode::Backspace,
@@ -90,7 +92,10 @@ impl<'de> Deserialize<'de> for ImmediateCmdConfig {
 							if maybe_char.chars().count() == 1 {
 								KeyCode::Char(maybe_char.chars().next().unwrap())
 							} else {
-								return Err(A::Error::invalid_value(Unexpected::Str(maybe_char), &"expected a single character or a key name"));
+								return Err(A::Error::invalid_value(
+									Unexpected::Str(maybe_char),
+									&"expected a single character or a key name",
+								));
 							}
 						},
 					};
@@ -109,124 +114,85 @@ impl<'de> Deserialize<'de> for ImmediateCmdConfig {
 #[derive(Serialize, Deserialize)]
 pub struct ParserConfig {
 	/// Commands that execute upon a single keypress
-    pub immediate_cmds: ImmediateCmdConfig,
+	pub immediate_cmds: ImmediateCmdConfig,
 	/// Commands that execute when evaluating a typed string
-    pub string_cmds: HashMap<String, ParserCommand>,
+	pub string_cmds: HashMap<String, ParserCommand>,
 	/// Determines what is done with the buffer when executing an immediate
-    pub imm_eval_mode: EvalMode,
+	pub imm_eval_mode: EvalMode,
 }
 impl Default for ParserConfig {
-    fn default() -> Self {
+	fn default() -> Self {
 		let mut immediate_cmds = HashMap::new();
 		let mut string_cmds = HashMap::new();
 		let imm_eval_mode = EvalMode::default();
 
 		// TODO: literally all of this needs to be configurable
-		immediate_cmds
-            .insert(KeyCode::Enter, ParserCommand::EvalBuf);
-        immediate_cmds
-            .insert(KeyCode::Backspace, ParserCommand::DelChar);
-        immediate_cmds
-            .insert(KeyCode::Delete, ParserCommand::DelChar);
+		immediate_cmds.insert(KeyCode::Enter, ParserCommand::EvalBuf);
+		immediate_cmds.insert(KeyCode::Backspace, ParserCommand::DelChar);
+		immediate_cmds.insert(KeyCode::Delete, ParserCommand::DelChar);
 
-        immediate_cmds
-            .insert(KeyCode::Char('+'), ParserCommand::CalcBinOp(BinOp::Add));
-        immediate_cmds
-            .insert(KeyCode::Char('-'), ParserCommand::CalcBinOp(BinOp::Sub));
-        immediate_cmds
-            .insert(KeyCode::Char('*'), ParserCommand::CalcBinOp(BinOp::Mul));
-        immediate_cmds
-            .insert(KeyCode::Char('/'), ParserCommand::CalcBinOp(BinOp::Div));
-        immediate_cmds
-            .insert(KeyCode::Char('S'), ParserCommand::CalcBinOp(BinOp::Swp));
-        immediate_cmds
-            .insert(KeyCode::Char('P'), ParserCommand::CalcBinOp(BinOp::Pow));
-        immediate_cmds
-            .insert(KeyCode::Char('?'), ParserCommand::CalcBinOp(BinOp::IntDiv));
-        immediate_cmds
-            .insert(KeyCode::Char('%'), ParserCommand::CalcBinOp(BinOp::Mod));
+		immediate_cmds.insert(KeyCode::Char('+'), ParserCommand::CalcBinOp(BinOp::Add));
+		immediate_cmds.insert(KeyCode::Char('-'), ParserCommand::CalcBinOp(BinOp::Sub));
+		immediate_cmds.insert(KeyCode::Char('*'), ParserCommand::CalcBinOp(BinOp::Mul));
+		immediate_cmds.insert(KeyCode::Char('/'), ParserCommand::CalcBinOp(BinOp::Div));
+		immediate_cmds.insert(KeyCode::Char('S'), ParserCommand::CalcBinOp(BinOp::Swp));
+		immediate_cmds.insert(KeyCode::Char('P'), ParserCommand::CalcBinOp(BinOp::Pow));
+		immediate_cmds.insert(KeyCode::Char('?'), ParserCommand::CalcBinOp(BinOp::IntDiv));
+		immediate_cmds.insert(KeyCode::Char('%'), ParserCommand::CalcBinOp(BinOp::Mod));
 
-        immediate_cmds
-            .insert(KeyCode::Char('N'), ParserCommand::CalcUnOp(UnOp::Neg));
-        immediate_cmds
-            .insert(KeyCode::Char('C'), ParserCommand::CalcUnOp(UnOp::Pop));
+		immediate_cmds.insert(KeyCode::Char('N'), ParserCommand::CalcUnOp(UnOp::Neg));
+		immediate_cmds.insert(KeyCode::Char('C'), ParserCommand::CalcUnOp(UnOp::Pop));
 
-        immediate_cmds
-            .insert(KeyCode::Char('F'), ParserCommand::CalcStore);
-        immediate_cmds
-            .insert(KeyCode::Char('D'), ParserCommand::CalcDelete);
-        immediate_cmds
-            .insert(KeyCode::Char('R'), ParserCommand::CalcRecall);
+		immediate_cmds.insert(KeyCode::Char('F'), ParserCommand::CalcStore);
+		immediate_cmds.insert(KeyCode::Char('D'), ParserCommand::CalcDelete);
+		immediate_cmds.insert(KeyCode::Char('R'), ParserCommand::CalcRecall);
 
-        string_cmds
-            .insert("quit".into(), ParserCommand::Quit);
+		string_cmds.insert("quit".into(), ParserCommand::Quit);
 
-        string_cmds
-            .insert("add".into(), ParserCommand::CalcBinOp(BinOp::Add));
-        string_cmds
-            .insert("sub".into(), ParserCommand::CalcBinOp(BinOp::Sub));
-        string_cmds
-            .insert("mul".into(), ParserCommand::CalcBinOp(BinOp::Mul));
-        string_cmds
-            .insert("div".into(), ParserCommand::CalcBinOp(BinOp::Div));
-        string_cmds
-            .insert("swp".into(), ParserCommand::CalcBinOp(BinOp::Swp));
-        string_cmds
-            .insert("pow".into(), ParserCommand::CalcBinOp(BinOp::Pow));
-        string_cmds
-            .insert("root".into(), ParserCommand::CalcBinOp(BinOp::Root));
-        string_cmds
-            .insert("exp".into(), ParserCommand::CalcBinOp(BinOp::Exp));
-        string_cmds
-            .insert("intdiv".into(), ParserCommand::CalcBinOp(BinOp::IntDiv));
-        string_cmds
-            .insert("mod".into(), ParserCommand::CalcBinOp(BinOp::Mod));
+		string_cmds.insert("add".into(), ParserCommand::CalcBinOp(BinOp::Add));
+		string_cmds.insert("sub".into(), ParserCommand::CalcBinOp(BinOp::Sub));
+		string_cmds.insert("mul".into(), ParserCommand::CalcBinOp(BinOp::Mul));
+		string_cmds.insert("div".into(), ParserCommand::CalcBinOp(BinOp::Div));
+		string_cmds.insert("swp".into(), ParserCommand::CalcBinOp(BinOp::Swp));
+		string_cmds.insert("pow".into(), ParserCommand::CalcBinOp(BinOp::Pow));
+		string_cmds.insert("root".into(), ParserCommand::CalcBinOp(BinOp::Root));
+		string_cmds.insert("exp".into(), ParserCommand::CalcBinOp(BinOp::Exp));
+		string_cmds.insert("intdiv".into(), ParserCommand::CalcBinOp(BinOp::IntDiv));
+		string_cmds.insert("mod".into(), ParserCommand::CalcBinOp(BinOp::Mod));
 
-        string_cmds
-            .insert("neg".into(), ParserCommand::CalcUnOp(UnOp::Neg));
-        string_cmds
-            .insert("sqrt".into(), ParserCommand::CalcUnOp(UnOp::Sqrt));
-        string_cmds
-            .insert("sqr".into(), ParserCommand::CalcUnOp(UnOp::Sqr));
-        string_cmds
-            .insert("sin".into(), ParserCommand::CalcUnOp(UnOp::Sin));
-        string_cmds
-            .insert("cos".into(), ParserCommand::CalcUnOp(UnOp::Cos));
-        string_cmds
-            .insert("tan".into(), ParserCommand::CalcUnOp(UnOp::Tan));
-        string_cmds
-            .insert("asin".into(), ParserCommand::CalcUnOp(UnOp::Asin));
-        string_cmds
-            .insert("acos".into(), ParserCommand::CalcUnOp(UnOp::Acos));
-        string_cmds
-            .insert("atan".into(), ParserCommand::CalcUnOp(UnOp::Atan));
-        string_cmds
-            .insert("rad".into(), ParserCommand::CalcUnOp(UnOp::Rad));
-        string_cmds
-            .insert("deg".into(), ParserCommand::CalcUnOp(UnOp::Deg));
-        string_cmds
-            .insert("pop".into(), ParserCommand::CalcUnOp(UnOp::Pop));
+		string_cmds.insert("neg".into(), ParserCommand::CalcUnOp(UnOp::Neg));
+		string_cmds.insert("sqrt".into(), ParserCommand::CalcUnOp(UnOp::Sqrt));
+		string_cmds.insert("sqr".into(), ParserCommand::CalcUnOp(UnOp::Sqr));
+		string_cmds.insert("sin".into(), ParserCommand::CalcUnOp(UnOp::Sin));
+		string_cmds.insert("cos".into(), ParserCommand::CalcUnOp(UnOp::Cos));
+		string_cmds.insert("tan".into(), ParserCommand::CalcUnOp(UnOp::Tan));
+		string_cmds.insert("asin".into(), ParserCommand::CalcUnOp(UnOp::Asin));
+		string_cmds.insert("acos".into(), ParserCommand::CalcUnOp(UnOp::Acos));
+		string_cmds.insert("atan".into(), ParserCommand::CalcUnOp(UnOp::Atan));
+		string_cmds.insert("rad".into(), ParserCommand::CalcUnOp(UnOp::Rad));
+		string_cmds.insert("deg".into(), ParserCommand::CalcUnOp(UnOp::Deg));
+		string_cmds.insert("pop".into(), ParserCommand::CalcUnOp(UnOp::Pop));
 
-        Self {
+		Self {
 			immediate_cmds: immediate_cmds.into(),
 			string_cmds,
-			imm_eval_mode
+			imm_eval_mode,
 		}
-    }
+	}
 }
 
 // Actions
 #[derive(Clone, Copy, Debug)]
 pub enum ParserCommand {
-    Quit,
-    DelChar,
-    EvalBuf,
+	Quit,
+	DelChar,
+	EvalBuf,
 
-    CalcBinOp(BinOp),
-    CalcUnOp(UnOp),
-    CalcStore,
-    CalcDelete,
-    CalcRecall,
+	CalcBinOp(BinOp),
+	CalcUnOp(UnOp),
+	CalcStore,
+	CalcDelete,
+	CalcRecall,
 }
 impl ParserCommand {
 	/// Name of the enum for (de)serialization
@@ -238,7 +204,7 @@ impl ParserCommand {
 impl Serialize for ParserCommand {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 	where
-	    S: Serializer
+		S: Serializer,
 	{
 		let variant: ParserCommandVariant = (*self).into();
 		serializer.serialize_unit_variant(Self::enum_name(), variant.index(), variant.name())
@@ -247,7 +213,7 @@ impl Serialize for ParserCommand {
 impl<'de> Deserialize<'de> for ParserCommand {
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 	where
-	    D: Deserializer<'de>
+		D: Deserializer<'de>,
 	{
 		// Most of the functions here can just forward to the ParserCommandVariantVisitor
 		// TODO: Maybe DeserializeSeed might be better then?
@@ -261,67 +227,97 @@ impl<'de> Deserialize<'de> for ParserCommand {
 
 			fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
 			where
-			    E: serde::de::Error,
+				E: serde::de::Error,
 			{
-				if let Ok(v) = ParserCommand::try_from(ParserCommandVariantVisitor.visit_str::<E>(v)?) {
+				if let Ok(v) =
+					ParserCommand::try_from(ParserCommandVariantVisitor.visit_str::<E>(v)?)
+				{
 					Ok(v)
 				} else {
-					Err(E::invalid_value(Unexpected::Str(v), &"a string identifying a unit variant"))
+					Err(E::invalid_value(
+						Unexpected::Str(v),
+						&"a string identifying a unit variant",
+					))
 				}
 			}
 
 			fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
 			where
-			    E: serde::de::Error,
+				E: serde::de::Error,
 			{
-				if let Ok(v) = ParserCommand::try_from(ParserCommandVariantVisitor.visit_i64::<E>(v)?) {
+				if let Ok(v) =
+					ParserCommand::try_from(ParserCommandVariantVisitor.visit_i64::<E>(v)?)
+				{
 					Ok(v)
 				} else {
-					Err(E::invalid_value(Unexpected::Signed(v), &"an integer identifying a unit variant"))
+					Err(E::invalid_value(
+						Unexpected::Signed(v),
+						&"an integer identifying a unit variant",
+					))
 				}
 			}
 
 			fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
 			where
-			    E: serde::de::Error,
+				E: serde::de::Error,
 			{
-				if let Ok(v) = ParserCommand::try_from(ParserCommandVariantVisitor.visit_i128::<E>(v)?) {
+				if let Ok(v) =
+					ParserCommand::try_from(ParserCommandVariantVisitor.visit_i128::<E>(v)?)
+				{
 					Ok(v)
 				} else {
-					Err(E::invalid_value(Unexpected::Signed(v as i64), &"an integer identifying a unit variant"))
+					Err(E::invalid_value(
+						Unexpected::Signed(v as i64),
+						&"an integer identifying a unit variant",
+					))
 				}
 			}
 
 			fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
 			where
-			    E: serde::de::Error,
+				E: serde::de::Error,
 			{
-				if let Ok(v) = ParserCommand::try_from(ParserCommandVariantVisitor.visit_u32::<E>(v)?) {
+				if let Ok(v) =
+					ParserCommand::try_from(ParserCommandVariantVisitor.visit_u32::<E>(v)?)
+				{
 					Ok(v)
 				} else {
-					Err(E::invalid_value(Unexpected::Unsigned(v as u64), &"an integer identifying a unit variant"))
+					Err(E::invalid_value(
+						Unexpected::Unsigned(v as u64),
+						&"an integer identifying a unit variant",
+					))
 				}
 			}
 
 			fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
 			where
-			    E: serde::de::Error,
+				E: serde::de::Error,
 			{
-				if let Ok(v) = ParserCommand::try_from(ParserCommandVariantVisitor.visit_u64::<E>(v)?) {
+				if let Ok(v) =
+					ParserCommand::try_from(ParserCommandVariantVisitor.visit_u64::<E>(v)?)
+				{
 					Ok(v)
 				} else {
-					Err(E::invalid_value(Unexpected::Unsigned(v), &"an integer identifying a unit variant"))
+					Err(E::invalid_value(
+						Unexpected::Unsigned(v),
+						&"an integer identifying a unit variant",
+					))
 				}
 			}
 
 			fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
 			where
-			    E: serde::de::Error,
+				E: serde::de::Error,
 			{
-				if let Ok(v) = ParserCommand::try_from(ParserCommandVariantVisitor.visit_u128::<E>(v)?) {
+				if let Ok(v) =
+					ParserCommand::try_from(ParserCommandVariantVisitor.visit_u128::<E>(v)?)
+				{
 					Ok(v)
 				} else {
-					Err(E::invalid_value(Unexpected::Unsigned(v as u64), &"an integer identifying a unit variant"))
+					Err(E::invalid_value(
+						Unexpected::Unsigned(v as u64),
+						&"an integer identifying a unit variant",
+					))
 				}
 			}
 
@@ -340,7 +336,11 @@ impl<'de> Deserialize<'de> for ParserCommand {
 			}
 		}
 
-		deserializer.deserialize_enum("ParserCommand", ParserCommandVariant::ALL_NAMES, ParserCommandVisitor)
+		deserializer.deserialize_enum(
+			"ParserCommand",
+			ParserCommandVariant::ALL_NAMES,
+			ParserCommandVisitor,
+		)
 	}
 }
 
@@ -514,7 +514,7 @@ impl TryFrom<u32> for ParserCommandVariant {
 	fn try_from(value: u32) -> Result<Self, Self::Error> {
 		// NOTE: These values must stay in sync with the ParserCommandVariant::index() function
 		// above!
-	    match value {
+		match value {
 			0 => Ok(Self::Quit),
 			1 => Ok(Self::DelChar),
 			2 => Ok(Self::EvalBuf),
@@ -580,7 +580,7 @@ impl TryFrom<&str> for ParserCommandVariant {
 			Self::CALC_STORE => Ok(Self::CalcStore),
 			Self::CALC_DELETE => Ok(Self::CalcDelete),
 			Self::CALC_RECALL => Ok(Self::CalcRecall),
-			 _ => Err(())
+			_ => Err(()),
 		}
 	}
 }
@@ -624,7 +624,7 @@ impl TryFrom<ParserCommandVariant> for ParserCommand {
 	type Error = ();
 
 	fn try_from(value: ParserCommandVariant) -> Result<Self, Self::Error> {
-	    match value {
+		match value {
 			ParserCommandVariant::Quit => Ok(ParserCommand::Quit),
 			ParserCommandVariant::DelChar => Ok(ParserCommand::DelChar),
 			ParserCommandVariant::EvalBuf => Ok(ParserCommand::EvalBuf),
@@ -681,7 +681,10 @@ impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 		E: serde::de::Error,
 	{
 		if v > u32::MAX as i64 || v < 0 {
-			Err(E::invalid_value(Unexpected::Other("integer outside bounds of u32"), &"integer fitting in u32"))
+			Err(E::invalid_value(
+				Unexpected::Other("integer outside bounds of u32"),
+				&"integer fitting in u32",
+			))
 		} else {
 			self.visit_u32(v as u32)
 		}
@@ -692,7 +695,10 @@ impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 		E: serde::de::Error,
 	{
 		if v > u32::MAX as i128 || v < 0 {
-			Err(E::invalid_value(Unexpected::Other("integer outside bounds of u32"), &"integer fitting in u32"))
+			Err(E::invalid_value(
+				Unexpected::Other("integer outside bounds of u32"),
+				&"integer fitting in u32",
+			))
 		} else {
 			self.visit_u32(v as u32)
 		}
@@ -705,7 +711,10 @@ impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 		if let Ok(v) = ParserCommandVariant::try_from(v) {
 			Ok(v)
 		} else {
-			Err(E::invalid_value(Unexpected::Other("an unrecognized integer discriminant"), &"an integer matching an enum variant's index"))
+			Err(E::invalid_value(
+				Unexpected::Other("an unrecognized integer discriminant"),
+				&"an integer matching an enum variant's index",
+			))
 		}
 	}
 
@@ -714,7 +723,10 @@ impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 		E: serde::de::Error,
 	{
 		if v > u32::MAX as u64 {
-			Err(E::invalid_value(Unexpected::Other("integer outside bounds of u64"), &"integer fitting in u32"))
+			Err(E::invalid_value(
+				Unexpected::Other("integer outside bounds of u64"),
+				&"integer fitting in u32",
+			))
 		} else {
 			self.visit_u32(v as u32)
 		}
@@ -725,7 +737,10 @@ impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 		E: serde::de::Error,
 	{
 		if v > u32::MAX as u128 {
-			Err(E::invalid_value(Unexpected::Other("integer outside bounds of u64"), &"integer fitting in u32"))
+			Err(E::invalid_value(
+				Unexpected::Other("integer outside bounds of u64"),
+				&"integer fitting in u32",
+			))
 		} else {
 			self.visit_u32(v as u32)
 		}
@@ -734,162 +749,168 @@ impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 impl<'de> Deserialize<'de> for ParserCommandVariant {
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 	where
-		D: Deserializer<'de>
+		D: Deserializer<'de>,
 	{
 		Ok(deserializer.deserialize_identifier(ParserCommandVariantVisitor)?)
 	}
 }
 
 pub enum ExternalCommand {
-    Quit,
-    CalcCmd(Command),
+	Quit,
+	CalcCmd(Command),
 }
 
 pub struct Parser {
-    pub bfr: Vec<char>,
-    pub config: ParserConfig,
+	pub bfr: Vec<char>,
+	pub config: ParserConfig,
 }
 impl Parser {
-    pub fn new() -> Parser {
-        Parser {
-            bfr: Vec::new(),
-            config: ParserConfig::default(),
-        }
-    }
+	pub fn new() -> Parser {
+		Parser {
+			bfr: Vec::new(),
+			config: ParserConfig::default(),
+		}
+	}
 
-    // When pressing a button with an immediate action, the current buffer is evaluated to
-    // determine if an action should occur before the immediate action, which can cause
-    // more than one action to be performed in a single press, hence the need for `Vec`
+	// When pressing a button with an immediate action, the current buffer is evaluated to
+	// determine if an action should occur before the immediate action, which can cause
+	// more than one action to be performed in a single press, hence the need for `Vec`
 
-    // Maybe return an `Option` rather than an empty `Vec`?
-    pub fn parse(&mut self, ke: KeyEvent) -> Vec<ExternalCommand> {
-        let mut actions = Vec::new();
+	// Maybe return an `Option` rather than an empty `Vec`?
+	pub fn parse(&mut self, ke: KeyEvent) -> Vec<ExternalCommand> {
+		let mut actions = Vec::new();
 
-        // I don't know a better way to return early on non-presses
-        match ke.kind {
-            KeyEventKind::Press => (),
-            _ => return actions,
-        }
+		// I don't know a better way to return early on non-presses
+		match ke.kind {
+			KeyEventKind::Press => (),
+			_ => return actions,
+		}
 
-        if let Some(inc_cmd) = self.config.immediate_cmds.0.get(&ke.code) {
-            // Special cases, no pre-buffer evaluation should be done
-            match *inc_cmd {
-                ParserCommand::DelChar => {
-                    self.bfr.pop();
-                    return actions;
-                }
-                ParserCommand::EvalBuf => {
-                    if let Some(cmd) = self.eval_buffer(false) {
-                        actions.push(cmd);
-                        self.bfr.clear();
-                    }
-                    return actions;
-                }
-                _ => {
-                    // If not a special case, do pre-eval
-                    if let Some(cmd) = self.eval_buffer(true) {
-                        actions.push(cmd);
-                        self.bfr.clear();
-                    }
-                }
-            }
+		if let Some(inc_cmd) = self.config.immediate_cmds.0.get(&ke.code) {
+			// Special cases, no pre-buffer evaluation should be done
+			match *inc_cmd {
+				ParserCommand::DelChar => {
+					self.bfr.pop();
+					return actions;
+				},
+				ParserCommand::EvalBuf => {
+					if let Some(cmd) = self.eval_buffer(false) {
+						actions.push(cmd);
+						self.bfr.clear();
+					}
+					return actions;
+				},
+				_ => {
+					// If not a special case, do pre-eval
+					if let Some(cmd) = self.eval_buffer(true) {
+						actions.push(cmd);
+						self.bfr.clear();
+					}
+				},
+			}
 
-            match *inc_cmd {
-                ParserCommand::Quit => actions.push(ExternalCommand::Quit),
+			match *inc_cmd {
+				ParserCommand::Quit => actions.push(ExternalCommand::Quit),
 
-                ParserCommand::CalcBinOp(op) => {
-                    actions.push(ExternalCommand::CalcCmd(Command::BinOp(op)))
-                }
-                ParserCommand::CalcUnOp(op) => {
-                    actions.push(ExternalCommand::CalcCmd(Command::UnOp(op)))
-                }
-                ParserCommand::CalcStore => {
-					actions.push(ExternalCommand::CalcCmd(Command::Sto(self.bfr.iter().collect())));
+				ParserCommand::CalcBinOp(op) => {
+					actions.push(ExternalCommand::CalcCmd(Command::BinOp(op)))
+				},
+				ParserCommand::CalcUnOp(op) => {
+					actions.push(ExternalCommand::CalcCmd(Command::UnOp(op)))
+				},
+				ParserCommand::CalcStore => {
+					actions.push(ExternalCommand::CalcCmd(Command::Sto(
+						self.bfr.iter().collect(),
+					)));
 					self.bfr.clear();
-                }
-                ParserCommand::CalcDelete => {
+				},
+				ParserCommand::CalcDelete => {
 					self.bfr.clear();
-					actions.push(ExternalCommand::CalcCmd(Command::Del(self.bfr.iter().collect())));
-                }
-                ParserCommand::CalcRecall => {
+					actions.push(ExternalCommand::CalcCmd(Command::Del(
+						self.bfr.iter().collect(),
+					)));
+				},
+				ParserCommand::CalcRecall => {
 					self.bfr.clear();
-					actions.push(ExternalCommand::CalcCmd(Command::Rcl(self.bfr.iter().collect())));
-                }
+					actions.push(ExternalCommand::CalcCmd(Command::Rcl(
+						self.bfr.iter().collect(),
+					)));
+				},
 
 				// Should always be handled by the prior match!
-                ParserCommand::DelChar => unreachable!(),
-                ParserCommand::EvalBuf => unreachable!(),
-            }
+				ParserCommand::DelChar => unreachable!(),
+				ParserCommand::EvalBuf => unreachable!(),
+			}
 
-            self.bfr.clear();
-        } else if let KeyCode::Char(c) = ke.code {
-            self.bfr.push(c);
-        }
+			self.bfr.clear();
+		} else if let KeyCode::Char(c) = ke.code {
+			self.bfr.push(c);
+		}
 
-        actions
-    }
+		actions
+	}
 
-    fn eval_buffer(&self, pre_eval: bool) -> Option<ExternalCommand> {
-        if !pre_eval && self.bfr.len() == 0 {
-            return Some(ExternalCommand::CalcCmd(Command::Push(None)));
-        }
+	fn eval_buffer(&self, pre_eval: bool) -> Option<ExternalCommand> {
+		if !pre_eval && self.bfr.len() == 0 {
+			return Some(ExternalCommand::CalcCmd(Command::Push(None)));
+		}
 
-        let bfr_string = self.bfr.iter().collect::<String>();
-        let num_parse = bfr_string.parse::<f64>();
+		let bfr_string = self.bfr.iter().collect::<String>();
+		let num_parse = bfr_string.parse::<f64>();
 
-        let mode = match pre_eval {
-            true => self.config.imm_eval_mode,
-            false => EvalMode::All,
-        };
+		let mode = match pre_eval {
+			true => self.config.imm_eval_mode,
+			false => EvalMode::All,
+		};
 
-        // TODO: Reduce duplication here? Might not be worth it in such a small case
-        match mode {
-            EvalMode::None => return None,
-            EvalMode::Numbers => {
-                if let Ok(v) = num_parse {
-                    return Some(ExternalCommand::CalcCmd(Command::Push(Some(v))));
-                } else {
-                    return None;
-                }
-            }
-            EvalMode::Commands => {
-                if let Some(inc_cmd) = self.config.string_cmds.get(bfr_string.as_str()) {
-                    match *inc_cmd {
-                        ParserCommand::Quit => return Some(ExternalCommand::Quit),
+		// TODO: Reduce duplication here? Might not be worth it in such a small case
+		match mode {
+			EvalMode::None => return None,
+			EvalMode::Numbers => {
+				if let Ok(v) = num_parse {
+					return Some(ExternalCommand::CalcCmd(Command::Push(Some(v))));
+				} else {
+					return None;
+				}
+			},
+			EvalMode::Commands => {
+				if let Some(inc_cmd) = self.config.string_cmds.get(bfr_string.as_str()) {
+					match *inc_cmd {
+						ParserCommand::Quit => return Some(ExternalCommand::Quit),
 
-                        ParserCommand::CalcBinOp(op) => {
-                            return Some(ExternalCommand::CalcCmd(Command::BinOp(op)))
-                        }
-                        ParserCommand::CalcUnOp(op) => {
-                            return Some(ExternalCommand::CalcCmd(Command::UnOp(op)))
-                        }
+						ParserCommand::CalcBinOp(op) => {
+							return Some(ExternalCommand::CalcCmd(Command::BinOp(op)))
+						},
+						ParserCommand::CalcUnOp(op) => {
+							return Some(ExternalCommand::CalcCmd(Command::UnOp(op)))
+						},
 
-                        _ => panic!("Invalid command in eval_buffer"),
-                    }
-                } else {
-                    return None;
-                }
-            }
-            EvalMode::All => {
-                if let Ok(v) = num_parse {
-                    return Some(ExternalCommand::CalcCmd(Command::Push(Some(v))));
-                } else if let Some(inc_cmd) = self.config.string_cmds.get(bfr_string.as_str()) {
-                    match *inc_cmd {
-                        ParserCommand::Quit => return Some(ExternalCommand::Quit),
+						_ => panic!("Invalid command in eval_buffer"),
+					}
+				} else {
+					return None;
+				}
+			},
+			EvalMode::All => {
+				if let Ok(v) = num_parse {
+					return Some(ExternalCommand::CalcCmd(Command::Push(Some(v))));
+				} else if let Some(inc_cmd) = self.config.string_cmds.get(bfr_string.as_str()) {
+					match *inc_cmd {
+						ParserCommand::Quit => return Some(ExternalCommand::Quit),
 
-                        ParserCommand::CalcBinOp(op) => {
-                            return Some(ExternalCommand::CalcCmd(Command::BinOp(op)))
-                        }
-                        ParserCommand::CalcUnOp(op) => {
-                            return Some(ExternalCommand::CalcCmd(Command::UnOp(op)))
-                        }
+						ParserCommand::CalcBinOp(op) => {
+							return Some(ExternalCommand::CalcCmd(Command::BinOp(op)))
+						},
+						ParserCommand::CalcUnOp(op) => {
+							return Some(ExternalCommand::CalcCmd(Command::UnOp(op)))
+						},
 
-                        _ => panic!("Invalid command in eval_buffer"),
-                    }
-                } else {
-                    return None;
-                }
-            }
-        }
-    }
+						_ => panic!("Invalid command in eval_buffer"),
+					}
+				} else {
+					return None;
+				}
+			},
+		}
+	}
 }

@@ -1,8 +1,8 @@
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Direction, Constraint, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Styled};
-use ratatui::text::{Text, Line, Span};
-use ratatui::widgets::{Widget, Wrap, Paragraph};
+use ratatui::text::{Line, Span, Text};
+use ratatui::widgets::{Paragraph, Widget, Wrap};
 use serde::{Deserialize, Serialize};
 
 use crate::tui::TUI;
@@ -23,46 +23,46 @@ use crate::tui::TUI;
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct Colors {
 	/// The color of the decimal separator
-    decimal_separator: Color,
+	decimal_separator: Color,
 	/// The color of the exponent separator (the 'e' at the end of the number)
-    exponent_separator: Color,
+	exponent_separator: Color,
 	/// The color of the digits in the number
-    number: Color,
+	number: Color,
 	/// The color of the key labels for memory
-    memory_key: Color,
+	memory_key: Color,
 }
 impl Default for Colors {
-    fn default() -> Self {
-        Colors {
-            decimal_separator: Color::LightCyan,
-            exponent_separator: Color::LightCyan,
-            number: Color::Green,
-            memory_key: Color::Red,
-        }
-    }
+	fn default() -> Self {
+		Colors {
+			decimal_separator: Color::LightCyan,
+			exponent_separator: Color::LightCyan,
+			number: Color::Green,
+			memory_key: Color::Red,
+		}
+	}
 }
 
 /// Defines the relative positions of the stack and memory areas.
 #[derive(Default, Serialize, Deserialize, Clone, Copy)]
 pub enum Orientation {
 	/// Stack on the bottom, memory on the top
-    StackBottom,
+	StackBottom,
 	/// Stack on the top, memory on the bottom
-    StackTop,
+	StackTop,
 	/// Stack on the right, memory on the left
-    StackRight,
+	StackRight,
 	/// Stack on the left, memory on the right
 	#[default]
-    StackLeft,
+	StackLeft,
 }
 // For easy conversion into a layout direction
 impl From<Orientation> for Direction {
-    fn from(v: Orientation) -> Self {
-        match v {
-            Orientation::StackBottom | Orientation::StackTop => Direction::Vertical,
-            Orientation::StackRight | Orientation::StackLeft => Direction::Horizontal,
-        }
-    }
+	fn from(v: Orientation) -> Self {
+		match v {
+			Orientation::StackBottom | Orientation::StackTop => Direction::Vertical,
+			Orientation::StackRight | Orientation::StackLeft => Direction::Horizontal,
+		}
+	}
 }
 
 /// The text alignment of numbers on the stack.
@@ -70,17 +70,17 @@ impl From<Orientation> for Direction {
 pub enum StackAlignment {
 	#[default]
 	/// Align numbers left
-    Left,
+	Left,
 	/// Align numbers right
-    Right,
+	Right,
 }
 impl From<StackAlignment> for Alignment {
-    fn from(v: StackAlignment) -> Self {
-        match v {
-            StackAlignment::Left => Alignment::Left,
-            StackAlignment::Right => Alignment::Right,
-        }
-    }
+	fn from(v: StackAlignment) -> Self {
+		match v {
+			StackAlignment::Left => Alignment::Left,
+			StackAlignment::Right => Alignment::Right,
+		}
+	}
 }
 
 /// The text alignment of numbers in memory.
@@ -102,10 +102,10 @@ pub enum MemoryAlignment {
 /// Stores all of the configuration values for the renderer.
 #[derive(Default, Serialize, Deserialize)]
 pub struct RendererConfig {
-    pub colors: Colors,
-    pub stack_alignment: StackAlignment,
+	pub colors: Colors,
+	pub stack_alignment: StackAlignment,
 	pub memory_alignment: MemoryAlignment,
-    pub memory_location: Orientation,
+	pub memory_location: Orientation,
 }
 
 impl TUI {
@@ -143,39 +143,56 @@ impl TUI {
 		let mut cur_idx = 0;
 
 		if let Some(to) = decimal_idx {
-			cur_spans.push(String::from(&num_string[cur_idx..to]).set_style(self.config.renderer.colors.number));
-			cur_spans.push(String::from(&num_string[to..to+1]).set_style(self.config.renderer.colors.decimal_separator));
+			cur_spans.push(
+				String::from(&num_string[cur_idx..to])
+					.set_style(self.config.renderer.colors.number),
+			);
+			cur_spans.push(
+				String::from(&num_string[to..to + 1])
+					.set_style(self.config.renderer.colors.decimal_separator),
+			);
 			cur_idx = to + 1; // Again, working with only ASCII so this is okay
 		}
 		if let Some(to) = exponent_idx {
-			cur_spans.push(String::from(&num_string[cur_idx..to]).set_style(self.config.renderer.colors.number));
-			cur_spans.push(String::from(&num_string[to..to+1]).set_style(self.config.renderer.colors.exponent_separator));
+			cur_spans.push(
+				String::from(&num_string[cur_idx..to])
+					.set_style(self.config.renderer.colors.number),
+			);
+			cur_spans.push(
+				String::from(&num_string[to..to + 1])
+					.set_style(self.config.renderer.colors.exponent_separator),
+			);
 			cur_idx = to + 1; // See above
 		}
-		cur_spans.push(String::from(&num_string[cur_idx..]).set_style(self.config.renderer.colors.number));
+		cur_spans.push(
+			String::from(&num_string[cur_idx..]).set_style(self.config.renderer.colors.number),
+		);
 		cur_spans
 	}
 }
 
 impl Widget for &TUI {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        // TODO: Maybe let this be configurable too?
-        let constraints: Vec<Constraint> =
-            vec![Constraint::Percentage(50), Constraint::Percentage(50)];
+	fn render(self, area: Rect, buf: &mut Buffer) {
+		// TODO: Maybe let this be configurable too?
+		let constraints: Vec<Constraint> =
+			vec![Constraint::Percentage(50), Constraint::Percentage(50)];
 
-        let layout = Layout::new(self.config.renderer.memory_location.into(), constraints);
+		let layout = Layout::new(self.config.renderer.memory_location.into(), constraints);
 
-        let areas: [Rect; 2] = layout.areas(area);
-        let (main_area, memory_area) = match self.config.renderer.memory_location {
-            Orientation::StackLeft | Orientation::StackTop => (areas[0], areas[1]),
-            Orientation::StackRight | Orientation::StackBottom => (areas[1], areas[0]),
-        };
+		let areas: [Rect; 2] = layout.areas(area);
+		let (main_area, memory_area) = match self.config.renderer.memory_location {
+			Orientation::StackLeft | Orientation::StackTop => (areas[0], areas[1]),
+			Orientation::StackRight | Orientation::StackBottom => (areas[1], areas[0]),
+		};
 
-		let main_area_parts: [Rect; 2] =
-			Layout::new(
-				Direction::Vertical,
-				vec![Constraint::Min(self.calc.stack.len() as u16), Constraint::Percentage(100)]
-			).areas(main_area);
+		let main_area_parts: [Rect; 2] = Layout::new(
+			Direction::Vertical,
+			vec![
+				Constraint::Min(self.calc.stack.len() as u16),
+				Constraint::Percentage(100),
+			],
+		)
+		.areas(main_area);
 		let stack_area = main_area_parts[0];
 		let command_area = main_area_parts[1];
 
@@ -184,16 +201,20 @@ impl Widget for &TUI {
 		// f64 offers as well as allowing room for decimal separator, exponent separator, and
 		// exponent digits
 		if stack_area.width < 24 || (stack_area.height as usize) < self.calc.stack.len() {
-			Paragraph::new("Screen too small!").wrap(Wrap { trim: true }).render(area, buf);
+			Paragraph::new("Screen too small!")
+				.wrap(Wrap { trim: true })
+				.render(area, buf);
 			return;
 		}
 
 		// Stack area rendering
-        let mut stack_lines: Vec<Line> = vec![];
+		let mut stack_lines: Vec<Line> = vec![];
 
 		// Format each number per the config and insert it into stack_lines
 		for stack_value in self.calc.stack.iter().rev() {
-			stack_lines.push(Line::from(self.style_number(*stack_value, stack_area.width)));
+			stack_lines.push(Line::from(
+				self.style_number(*stack_value, stack_area.width),
+			));
 		}
 		Text::from(stack_lines).render(stack_area, buf);
 
@@ -220,5 +241,5 @@ impl Widget for &TUI {
 			cur_command.push(*cur_char);
 		}
 		cur_command.render(command_area, buf);
-    }
+	}
 }
