@@ -145,27 +145,27 @@ impl TUI {
 		if let Some(to) = decimal_idx {
 			cur_spans.push(
 				String::from(&num_string[cur_idx..to])
-					.set_style(self.config.renderer.colors.number),
+					.set_style(self.render_config.colors.number),
 			);
 			cur_spans.push(
 				String::from(&num_string[to..to + 1])
-					.set_style(self.config.renderer.colors.decimal_separator),
+					.set_style(self.render_config.colors.decimal_separator),
 			);
 			cur_idx = to + 1; // Again, working with only ASCII so this is okay
 		}
 		if let Some(to) = exponent_idx {
 			cur_spans.push(
 				String::from(&num_string[cur_idx..to])
-					.set_style(self.config.renderer.colors.number),
+					.set_style(self.render_config.colors.number),
 			);
 			cur_spans.push(
 				String::from(&num_string[to..to + 1])
-					.set_style(self.config.renderer.colors.exponent_separator),
+					.set_style(self.render_config.colors.exponent_separator),
 			);
 			cur_idx = to + 1; // See above
 		}
 		cur_spans.push(
-			String::from(&num_string[cur_idx..]).set_style(self.config.renderer.colors.number),
+			String::from(&num_string[cur_idx..]).set_style(self.render_config.colors.number),
 		);
 		cur_spans
 	}
@@ -177,10 +177,10 @@ impl Widget for &TUI {
 		let constraints: Vec<Constraint> =
 			vec![Constraint::Percentage(50), Constraint::Percentage(50)];
 
-		let layout = Layout::new(self.config.renderer.memory_location.into(), constraints);
+		let layout = Layout::new(self.render_config.memory_location.into(), constraints);
 
 		let areas: [Rect; 2] = layout.areas(area);
-		let (main_area, memory_area) = match self.config.renderer.memory_location {
+		let (main_area, memory_area) = match self.render_config.memory_location {
 			Orientation::StackLeft | Orientation::StackTop => (areas[0], areas[1]),
 			Orientation::StackRight | Orientation::StackBottom => (areas[1], areas[0]),
 		};
@@ -226,7 +226,7 @@ impl Widget for &TUI {
 			memory_prefix.push_str(": ");
 
 			let line_width = memory_area.width - memory_prefix.len() as u16;
-			cur_line.push_span(memory_prefix.set_style(self.config.renderer.colors.memory_key));
+			cur_line.push_span(memory_prefix.set_style(self.render_config.colors.memory_key));
 
 			for span in self.style_number(*val, line_width) {
 				cur_line.push_span(span);

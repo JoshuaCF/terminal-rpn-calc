@@ -23,14 +23,14 @@ pub struct TUIConfig {
 pub struct TUI {
 	calc: Calculator,
 	parser: Parser,
-	config: TUIConfig,
+	render_config: RendererConfig,
 }
 impl TUI {
 	pub fn new(calc: Calculator, config: TUIConfig) -> TUI {
 		TUI {
 			calc,
-			parser: Parser::new(),
-			config,
+			parser: Parser::new(config.parser),
+			render_config: config.renderer,
 		}
 	}
 	pub fn run(&mut self) -> std::io::Result<()> {

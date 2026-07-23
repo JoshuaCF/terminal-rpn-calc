@@ -789,10 +789,10 @@ pub struct Parser {
 	pub config: ParserConfig,
 }
 impl Parser {
-	pub fn new() -> Parser {
+	pub fn new(config: ParserConfig) -> Parser {
 		Parser {
 			bfr: Vec::new(),
-			config: ParserConfig::default(),
+			config,
 		}
 	}
 
