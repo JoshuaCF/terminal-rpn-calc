@@ -44,7 +44,7 @@ impl Default for Colors {
 
 /// Defines the relative positions of the stack and memory areas.
 #[derive(Default, Serialize, Deserialize, Clone, Copy)]
-pub enum Orientation {
+pub enum MemoryLocation {
 	/// Stack on the bottom, memory on the top.
 	StackBottom,
 	/// Stack on the top, memory on the bottom.
@@ -56,11 +56,11 @@ pub enum Orientation {
 	StackLeft,
 }
 // For easy conversion into a layout direction
-impl From<Orientation> for Direction {
-	fn from(v: Orientation) -> Self {
+impl From<MemoryLocation> for Direction {
+	fn from(v: MemoryLocation) -> Self {
 		match v {
-			Orientation::StackBottom | Orientation::StackTop => Direction::Vertical,
-			Orientation::StackRight | Orientation::StackLeft => Direction::Horizontal,
+			MemoryLocation::StackBottom | MemoryLocation::StackTop => Direction::Vertical,
+			MemoryLocation::StackRight | MemoryLocation::StackLeft => Direction::Horizontal,
 		}
 	}
 }
@@ -105,7 +105,7 @@ pub struct RendererConfig {
 	pub colors: Colors,
 	pub stack_alignment: StackAlignment,
 	pub memory_alignment: MemoryAlignment,
-	pub memory_location: Orientation,
+	pub memory_location: MemoryLocation,
 }
 
 impl TUI {
@@ -173,16 +173,20 @@ impl TUI {
 
 impl Widget for &TUI {
 	fn render(self, area: Rect, buf: &mut Buffer) {
-		// TODO: Maybe let this be configurable too?
-		let constraints: Vec<Constraint> =
-			vec![Constraint::Percentage(50), Constraint::Percentage(50)];
+		// width of 24 is not arbitrary, it permits the full 15 to 17 digits of decimal precision
+		// f64 offers as well as allowing room for decimal separator, exponent separator, and
+		// exponent digits
+		let constraints: Vec<Constraint> = match Into::<Direction>::into(self.render_config.memory_location) {
+			Direction::Vertical => vec![Constraint::Percentage(50), Constraint::Length(2), Constraint::Percentage(50)],
+			Direction::Horizontal => vec![Constraint::Length(24), Constraint::Length(4), Constraint::Percentage(100)],
+		};
 
 		let layout = Layout::new(self.render_config.memory_location.into(), constraints);
 
-		let areas: [Rect; 2] = layout.areas(area);
+		let areas: [Rect; 3] = layout.areas(area);
 		let (main_area, memory_area) = match self.render_config.memory_location {
-			Orientation::StackLeft | Orientation::StackTop => (areas[0], areas[1]),
-			Orientation::StackRight | Orientation::StackBottom => (areas[1], areas[0]),
+			MemoryLocation::StackLeft | MemoryLocation::StackTop => (areas[0], areas[2]),
+			MemoryLocation::StackRight | MemoryLocation::StackBottom => (areas[2], areas[0]),
 		};
 
 		let main_area_parts: [Rect; 2] = Layout::new(
@@ -197,10 +201,7 @@ impl Widget for &TUI {
 		let command_area = main_area_parts[1];
 
 		// Show error if regions are too small
-		// width of 24 is not arbitrary, it permits the full 15 to 17 digits of decimal precision
-		// f64 offers as well as allowing room for decimal separator, exponent separator, and
-		// exponent digits
-		if stack_area.width < 24 || (stack_area.height as usize) < self.calc.stack.len() {
+		if stack_area.width < 8 || (stack_area.height as usize) < self.calc.stack.len() {
 			Paragraph::new("Screen too small!")
 				.wrap(Wrap { trim: true })
 				.render(area, buf);
