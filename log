@@ -1,0 +1,5 @@
+   Compiling rpn_calc v0.3.0-indev (/home/joshua/projects/rust/terminal-rpn-calc)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.40s
+     Running `target/debug/rpn_calc`
+"f"
+"f"

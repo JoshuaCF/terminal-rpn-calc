@@ -849,16 +849,16 @@ impl Parser {
 					self.bfr.clear();
 				},
 				ParserCommand::CalcDelete => {
-					self.bfr.clear();
 					actions.push(ExternalCommand::CalcCmd(Command::Del(
 						self.bfr.iter().collect(),
 					)));
+					self.bfr.clear();
 				},
 				ParserCommand::CalcRecall => {
-					self.bfr.clear();
 					actions.push(ExternalCommand::CalcCmd(Command::Rcl(
 						self.bfr.iter().collect(),
 					)));
+					self.bfr.clear();
 				},
 
 				// Should always be handled by the prior match!
