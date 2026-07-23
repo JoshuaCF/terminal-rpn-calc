@@ -1,10 +1,10 @@
 mod calculator;
 mod tui;
 
-use std::io::{Read, Write};
 use std::env;
 use std::fs;
 use std::fs::File;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -42,7 +42,6 @@ fn get_config_folder() -> Option<PathBuf> {
 		path.push(".config");
 		return Some(path);
 	}
-
 
 	// Otherwise, return none
 	None
