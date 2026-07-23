@@ -229,7 +229,6 @@ impl<'de> Deserialize<'de> for ParserCommand {
 		D: Deserializer<'de>,
 	{
 		// Most of the functions here can just forward to the ParserCommandVariantVisitor
-		// TODO: Maybe DeserializeSeed might be better then?
 		struct ParserCommandVisitor;
 		impl<'de> Visitor<'de> for ParserCommandVisitor {
 			type Value = ParserCommand;
@@ -678,8 +677,7 @@ impl TryFrom<ParserCommandVariant> for ParserCommand {
 }
 
 // This struct is defined top-level in the file as its functions are used in the visitor for
-// `ParserCommand`s. Switching to `DeserializeSeed` for `ParserCommand` may remove the need for
-// this.
+// `ParserCommand`s.
 struct ParserCommandVariantVisitor;
 impl<'de> Visitor<'de> for ParserCommandVariantVisitor {
 	type Value = ParserCommandVariant;
