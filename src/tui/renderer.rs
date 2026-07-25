@@ -142,30 +142,19 @@ fn style_number<'a>(number: f64, width: u16, config: RendererConfig) -> Vec<Span
 	let mut cur_idx = 0;
 
 	if let Some(to) = decimal_idx {
-		cur_spans.push(
-			String::from(&num_string[cur_idx..to])
-				.set_style(config.colors.number),
-		);
-		cur_spans.push(
-			String::from(&num_string[to..to + 1])
-				.set_style(config.colors.decimal_separator),
-		);
+		cur_spans.push(String::from(&num_string[cur_idx..to]).set_style(config.colors.number));
+		cur_spans
+			.push(String::from(&num_string[to..to + 1]).set_style(config.colors.decimal_separator));
 		cur_idx = to + 1; // Again, working with only ASCII so this is okay
 	}
 	if let Some(to) = exponent_idx {
+		cur_spans.push(String::from(&num_string[cur_idx..to]).set_style(config.colors.number));
 		cur_spans.push(
-			String::from(&num_string[cur_idx..to])
-				.set_style(config.colors.number),
-		);
-		cur_spans.push(
-			String::from(&num_string[to..to + 1])
-				.set_style(config.colors.exponent_separator),
+			String::from(&num_string[to..to + 1]).set_style(config.colors.exponent_separator),
 		);
 		cur_idx = to + 1; // See above
 	}
-	cur_spans.push(
-		String::from(&num_string[cur_idx..]).set_style(config.colors.number),
-	);
+	cur_spans.push(String::from(&num_string[cur_idx..]).set_style(config.colors.number));
 	cur_spans
 }
 
@@ -179,9 +168,15 @@ fn divide_area(area: Rect, stack_size: usize, config: RendererConfig) -> TUIArea
 	// f64 offers as well as allowing room for decimal separator, exponent separator, and
 	// exponent digits
 	let constraints: Vec<Constraint> = match config.memory_location {
-		MemoryLocation::StackTop => vec![Constraint::Length(stack_size as u16 + 1), Constraint::Percentage(100)],
+		MemoryLocation::StackTop => vec![
+			Constraint::Length(stack_size as u16 + 1),
+			Constraint::Percentage(100),
+		],
 		MemoryLocation::StackLeft => vec![Constraint::Length(24), Constraint::Percentage(100)],
-		MemoryLocation::StackBottom => vec![Constraint::Percentage(100), Constraint::Length(stack_size as u16 + 1)],
+		MemoryLocation::StackBottom => vec![
+			Constraint::Percentage(100),
+			Constraint::Length(stack_size as u16 + 1),
+		],
 		MemoryLocation::StackRight => vec![Constraint::Percentage(100), Constraint::Length(24)],
 	};
 
@@ -204,12 +199,20 @@ fn divide_area(area: Rect, stack_size: usize, config: RendererConfig) -> TUIArea
 	let stack_area = main_area_parts[0];
 	let command_area = main_area_parts[1];
 
-	TUIAreas { command_line: command_area, stack: stack_area, memory: memory_area }
+	TUIAreas {
+		command_line: command_area,
+		stack: stack_area,
+		memory: memory_area,
+	}
 }
 
 impl Widget for &TUI {
 	fn render(self, area: Rect, buf: &mut Buffer) {
-		let TUIAreas { command_line, stack, memory } = divide_area(area, self.calc.stack.len(), self.render_config);
+		let TUIAreas {
+			command_line,
+			stack,
+			memory,
+		} = divide_area(area, self.calc.stack.len(), self.render_config);
 		// Show error if regions are too small
 		if stack.width < 8 || (stack.height as usize) < self.calc.stack.len() {
 			Paragraph::new("Screen too small!")
@@ -223,9 +226,10 @@ impl Widget for &TUI {
 
 		// Format each number per the config and insert it into stack_lines
 		for stack_value in self.calc.stack.iter().rev() {
-			stack_lines.push(Line::from(
-				style_number(*stack_value, stack.width, self.render_config),
-			).alignment(self.render_config.stack_alignment.into()));
+			stack_lines.push(
+				Line::from(style_number(*stack_value, stack.width, self.render_config))
+					.alignment(self.render_config.stack_alignment.into()),
+			);
 		}
 		Text::from(stack_lines).render(stack, buf);
 
