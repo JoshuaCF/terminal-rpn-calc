@@ -115,6 +115,7 @@ impl<'de> Deserialize<'de> for ImmediateCmdConfig {
 
 /// Configuration for keybinds and commands.
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct ParserConfig {
 	/// Commands that execute upon a single keypress.
 	pub immediate_cmds: ImmediateCmdConfig,

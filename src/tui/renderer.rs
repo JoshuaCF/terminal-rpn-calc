@@ -21,6 +21,7 @@ use crate::tui::TUI;
 // Configuration
 /// The colors of the various elements of the TUI.
 #[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(default)]
 pub struct Colors {
 	/// The color of the decimal separator.
 	decimal_separator: Color,
@@ -101,6 +102,7 @@ pub enum MemoryAlignment {
 
 /// Stores all of the configuration values for the renderer.
 #[derive(Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct RendererConfig {
 	pub colors: Colors,
 	pub stack_alignment: StackAlignment,

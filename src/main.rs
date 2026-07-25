@@ -13,6 +13,7 @@ use calculator::{Calculator, CalculatorConfig};
 use tui::{TUIConfig, TUI};
 
 #[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
 struct Config {
 	calc: CalculatorConfig,
 	tui: TUIConfig,

@@ -16,6 +16,7 @@ enum EmptyPushBehavior {
 	Last,
 }
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct CalculatorConfig {
 	empty_push_behavior: EmptyPushBehavior,
 	stack_size: usize,
