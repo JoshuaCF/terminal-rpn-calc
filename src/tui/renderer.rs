@@ -119,7 +119,7 @@ impl TUI {
 		// digit)
 		// Continue reducing precision until it fits
 		// Maybe there's a smarter way, but this is plenty good enough
-		let mut num_string = format!("{:>1$}", number, width as usize);
+		let mut num_string = format!("{:>1}", number);
 		// .len() acceptable here since number formatting will only use ASCII which is 1 char to
 		// 1 byte
 		let mut precision = (width - 3) as usize;
@@ -177,16 +177,16 @@ impl Widget for &TUI {
 		// f64 offers as well as allowing room for decimal separator, exponent separator, and
 		// exponent digits
 		let constraints: Vec<Constraint> = match Into::<Direction>::into(self.render_config.memory_location) {
-			Direction::Vertical => vec![Constraint::Percentage(50), Constraint::Length(2), Constraint::Percentage(50)],
-			Direction::Horizontal => vec![Constraint::Length(24), Constraint::Length(4), Constraint::Percentage(100)],
+			Direction::Vertical => vec![Constraint::Length(self.calc.stack.len() as u16 + 1), Constraint::Percentage(100)],
+			Direction::Horizontal => vec![Constraint::Length(24), Constraint::Percentage(100)],
 		};
 
-		let layout = Layout::new(self.render_config.memory_location.into(), constraints);
+		let layout = Layout::new(self.render_config.memory_location.into(), constraints).spacing(2);
 
-		let areas: [Rect; 3] = layout.areas(area);
+		let areas: [Rect; 2] = layout.areas(area);
 		let (main_area, memory_area) = match self.render_config.memory_location {
-			MemoryLocation::StackLeft | MemoryLocation::StackTop => (areas[0], areas[2]),
-			MemoryLocation::StackRight | MemoryLocation::StackBottom => (areas[2], areas[0]),
+			MemoryLocation::StackLeft | MemoryLocation::StackTop => (areas[0], areas[1]),
+			MemoryLocation::StackRight | MemoryLocation::StackBottom => (areas[1], areas[0]),
 		};
 
 		let main_area_parts: [Rect; 2] = Layout::new(
@@ -215,7 +215,7 @@ impl Widget for &TUI {
 		for stack_value in self.calc.stack.iter().rev() {
 			stack_lines.push(Line::from(
 				self.style_number(*stack_value, stack_area.width),
-			));
+			).alignment(self.render_config.stack_alignment.into()));
 		}
 		Text::from(stack_lines).render(stack_area, buf);
 
@@ -229,8 +229,17 @@ impl Widget for &TUI {
 			let line_width = memory_area.width - memory_prefix.len() as u16;
 			cur_line.push_span(memory_prefix.set_style(self.render_config.colors.memory_key));
 
-			for span in self.style_number(*val, line_width) {
+			let styled_number = self.style_number(*val, line_width);
+			if let MemoryAlignment::SplitMiddle = self.render_config.memory_alignment {
+				let number_len = styled_number.iter().fold(0, |acc, e| acc + e.width());
+				cur_line.push_span(" ".repeat(line_width as usize - number_len));
+			}
+
+			for span in styled_number {
 				cur_line.push_span(span);
+			}
+			if let MemoryAlignment::AllRight = self.render_config.memory_alignment {
+				cur_line = cur_line.right_aligned();
 			}
 			memory_lines.push(cur_line);
 		}
