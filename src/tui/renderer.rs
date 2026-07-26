@@ -45,7 +45,7 @@ impl Default for Colors {
 
 /// Defines the relative positions of the stack and memory areas.
 #[derive(Default, Serialize, Deserialize, Clone, Copy)]
-pub enum MemoryLocation {
+pub enum StackLocation {
 	/// Stack on the bottom, memory on the top.
 	StackBottom,
 	/// Stack on the top, memory on the bottom.
@@ -57,11 +57,11 @@ pub enum MemoryLocation {
 	StackLeft,
 }
 // For easy conversion into a layout direction
-impl From<MemoryLocation> for Direction {
-	fn from(v: MemoryLocation) -> Self {
+impl From<StackLocation> for Direction {
+	fn from(v: StackLocation) -> Self {
 		match v {
-			MemoryLocation::StackBottom | MemoryLocation::StackTop => Direction::Vertical,
-			MemoryLocation::StackRight | MemoryLocation::StackLeft => Direction::Horizontal,
+			StackLocation::StackBottom | StackLocation::StackTop => Direction::Vertical,
+			StackLocation::StackRight | StackLocation::StackLeft => Direction::Horizontal,
 		}
 	}
 }
@@ -107,7 +107,7 @@ pub struct RendererConfig {
 	pub colors: Colors,
 	pub stack_alignment: StackAlignment,
 	pub memory_alignment: MemoryAlignment,
-	pub memory_location: MemoryLocation,
+	pub stack_location: StackLocation,
 }
 
 /// Converts an [`f64`] into [`Span`]s representing the number with the styling provided in the
@@ -169,25 +169,25 @@ fn divide_area(area: Rect, stack_size: usize, config: RendererConfig) -> TUIArea
 	// width of 24 is not arbitrary, it permits the full 15 to 17 digits of decimal precision
 	// f64 offers as well as allowing room for decimal separator, exponent separator, and
 	// exponent digits
-	let constraints: Vec<Constraint> = match config.memory_location {
-		MemoryLocation::StackTop => vec![
+	let constraints: Vec<Constraint> = match config.stack_location {
+		StackLocation::StackTop => vec![
 			Constraint::Length(stack_size as u16 + 1),
 			Constraint::Percentage(100),
 		],
-		MemoryLocation::StackLeft => vec![Constraint::Length(24), Constraint::Percentage(100)],
-		MemoryLocation::StackBottom => vec![
+		StackLocation::StackLeft => vec![Constraint::Length(24), Constraint::Percentage(100)],
+		StackLocation::StackBottom => vec![
 			Constraint::Percentage(100),
 			Constraint::Length(stack_size as u16 + 1),
 		],
-		MemoryLocation::StackRight => vec![Constraint::Percentage(100), Constraint::Length(24)],
+		StackLocation::StackRight => vec![Constraint::Percentage(100), Constraint::Length(24)],
 	};
 
-	let layout = Layout::new(config.memory_location.into(), constraints).spacing(2);
+	let layout = Layout::new(config.stack_location.into(), constraints).spacing(2);
 
 	let areas: [Rect; 2] = layout.areas(area);
-	let (main_area, memory_area) = match config.memory_location {
-		MemoryLocation::StackLeft | MemoryLocation::StackTop => (areas[0], areas[1]),
-		MemoryLocation::StackRight | MemoryLocation::StackBottom => (areas[1], areas[0]),
+	let (main_area, memory_area) = match config.stack_location {
+		StackLocation::StackLeft | StackLocation::StackTop => (areas[0], areas[1]),
+		StackLocation::StackRight | StackLocation::StackBottom => (areas[1], areas[0]),
 	};
 
 	let main_area_parts: [Rect; 2] = Layout::new(
