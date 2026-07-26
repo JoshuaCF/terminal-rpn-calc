@@ -245,4 +245,10 @@ must be one of the commands listed above.
 
 ## Command-line Flags
 
-Currently unimplemented.
+The following command line flags are supported:
+
+- `-c`, `--config-path`: takes a path to a file and uses that as the config file
+- `-g`, `--generate-config`: generate a fresh config file at the location without prompting for confirmation,
+overwriting an existing file if one is there. Requires `--config-path` to be supplied
+- `-h`, `--help`: print help
+- `-V`, `--version`: print version

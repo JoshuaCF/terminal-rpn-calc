@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 
 use calculator::{Calculator, CalculatorConfig};
@@ -79,32 +80,58 @@ fn get_config_path() -> std::io::Result<PathBuf> {
 	Ok(alt_location.canonicalize()?)
 }
 
+#[derive(Debug, Parser)]
+#[command(version, about)]
+struct Args {
+	/// The path to load a config file from or generate a new config file to
+	#[arg(short, long)]
+	config_path: Option<String>,
+	/// Generate a fresh config file at the location without prompting for confirmation, overwriting an existing file if one is there. Requires
+	/// --config-path to be supplied
+	#[arg(short, long)]
+	generate_config: bool,
+}
+
 fn main() -> std::io::Result<()> {
-	// TODO: argument parsing (probably with clap)
-	let config_path = match get_config_path() {
-		Ok(v) => v,
-		Err(e) => {
-			eprintln!("Unable to deterministically find a default config path, please provide one as an argument to the executable.");
-			eprintln!("Reason: {}", e);
-			return Err(e);
-		},
-	};
+	let args = Args::parse();
+
+	if args.generate_config && args.config_path.is_none() {
+		eprintln!("--config-path must be supplied when --generate-config is given");
+		return Ok(());
+	}
+
+	let config_path;
+	if let Some(p) = args.config_path {
+		config_path = PathBuf::from(p);
+	} else {
+		config_path = match get_config_path() {
+			Ok(v) => v,
+			Err(e) => {
+				eprintln!("Unable to deterministically find a default config path, please provide one as an argument to the executable with --config-path");
+				eprintln!("Reason: {}", e);
+				return Err(e);
+			},
+		};
+	}
 
 	let config: Config;
 	// If a path is found but no config is there, prompt the user if they want to use that path. If
 	// not, exit and inform them to specify a path as a flag.
-	if !fs::exists(&config_path)? {
-		println!("Create new config at '{}' (y/n)", config_path.display());
-		let mut bfr = String::new();
-		loop {
-			std::io::stdin().read_line(&mut bfr)?;
-			match bfr.trim() {
-				"y" | "Y" => break,
-				"n" | "N" => {
-					eprintln!("Specify a config file through the flag to use the program.");
-					return Ok(());
-				},
-				_ => bfr.clear(),
+	if !fs::exists(&config_path)? || args.generate_config {
+		// prompt the user if the flag doesn't force config generation
+		if !args.generate_config {
+			println!("Create new config at '{}' (y/n)", config_path.display());
+			let mut bfr = String::new();
+			loop {
+				std::io::stdin().read_line(&mut bfr)?;
+				match bfr.trim() {
+					"y" | "Y" => break,
+					"n" | "N" => {
+						eprintln!("Specify a config file through the flag to use the program.");
+						return Ok(());
+					},
+					_ => bfr.clear(),
+				}
 			}
 		}
 		config = Config::default();
@@ -113,7 +140,7 @@ fn main() -> std::io::Result<()> {
 			fs::create_dir_all(v)?;
 		}
 
-		let mut config_file = File::create_new(&config_path)?;
+		let mut config_file = File::create(&config_path)?;
 		// If the unwrap errors here, it's an error in my code to be fixed
 		config_file.write(toml::to_string_pretty(&config).unwrap().as_bytes())?;
 		config_file.flush()?;
