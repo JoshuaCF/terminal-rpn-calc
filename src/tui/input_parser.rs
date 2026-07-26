@@ -52,8 +52,20 @@ impl Serialize for ImmediateCmdConfig {
 
 		for (key, value) in self.0.iter() {
 			match key {
-				// TODO: support more keys
 				KeyCode::Char(c) => map_serializer.serialize_entry(&c.to_string(), value)?,
+				KeyCode::F(num) => map_serializer.serialize_entry(&format!("f{}", num), value)?,
+				KeyCode::Left => map_serializer.serialize_entry("left", value)?,
+				KeyCode::Right => map_serializer.serialize_entry("right", value)?,
+				KeyCode::Up => map_serializer.serialize_entry("up", value)?,
+				KeyCode::Down => map_serializer.serialize_entry("down", value)?,
+				KeyCode::Home => map_serializer.serialize_entry("home", value)?,
+				KeyCode::End => map_serializer.serialize_entry("end", value)?,
+				KeyCode::PageUp => map_serializer.serialize_entry("pageup", value)?,
+				KeyCode::PageDown => map_serializer.serialize_entry("pagedown", value)?,
+				KeyCode::Tab => map_serializer.serialize_entry("tab", value)?,
+				KeyCode::BackTab => map_serializer.serialize_entry("backtab", value)?,
+				KeyCode::Insert => map_serializer.serialize_entry("insert", value)?,
+				KeyCode::Esc => map_serializer.serialize_entry("esc", value)?,
 				KeyCode::Enter => map_serializer.serialize_entry("enter", value)?,
 				KeyCode::Backspace => map_serializer.serialize_entry("backspace", value)?,
 				KeyCode::Delete => map_serializer.serialize_entry("delete", value)?,
@@ -86,22 +98,51 @@ impl<'de> Deserialize<'de> for ImmediateCmdConfig {
 				while let Some((key_string, value)) =
 					access.next_entry::<String, ParserCommand>()?
 				{
-					let key = match key_string.as_str() {
-						// TODO: support more keys
-						"enter" => KeyCode::Enter,
-						"backspace" => KeyCode::Backspace,
-						"delete" => KeyCode::Delete,
-						maybe_char => {
-							if maybe_char.chars().count() == 1 {
-								KeyCode::Char(maybe_char.chars().next().unwrap())
-							} else {
-								return Err(A::Error::invalid_value(
-									Unexpected::Str(maybe_char),
-									&"expected a single character or a key name",
-								));
-							}
-						},
-					};
+					let key;
+					if key_string.chars().count() > 1 {
+						key = match key_string.to_lowercase().as_str() {
+							"left" => KeyCode::Left,
+							"right" => KeyCode::Right,
+							"up" => KeyCode::Up,
+							"down" => KeyCode::Down,
+							"home" => KeyCode::Home,
+							"end" => KeyCode::End,
+							"pageup" => KeyCode::PageUp,
+							"pagedown" => KeyCode::PageDown,
+							"tab" => KeyCode::Tab,
+							"backtab" => KeyCode::BackTab,
+							"insert" => KeyCode::Insert,
+							"esc" => KeyCode::Esc,
+							"enter" => KeyCode::Enter,
+							"backspace" => KeyCode::Backspace,
+							"delete" => KeyCode::Delete,
+							maybe_fkey => {
+								if maybe_fkey.chars().next().unwrap() == 'f' {
+									let f_number: String = maybe_fkey.chars().skip(1).collect();
+									if let Ok(v) = f_number.parse() {
+										KeyCode::F(v)
+									} else {
+										return Err(A::Error::invalid_value(
+											Unexpected::Str(maybe_fkey),
+											&"expected a single character or a key name",
+										));
+									}
+								} else {
+									return Err(A::Error::invalid_value(
+										Unexpected::Str(maybe_fkey),
+										&"expected a single character or a key name",
+									));
+								}
+							},
+						}
+					} else if key_string.chars().count() == 1 {
+						key = KeyCode::Char(key_string.chars().next().unwrap());
+					} else {
+						return Err(A::Error::invalid_value(
+							Unexpected::Str(&key_string),
+							&"expected a single character or a key name",
+						));
+					}
 					map.insert(key, value);
 				}
 

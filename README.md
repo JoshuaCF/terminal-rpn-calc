@@ -221,7 +221,20 @@ to an action that can be performed:
 is detected, and so anything bound here will not be able to be typed into the input buffer. This config key is a table,
 where the values are one of the commands listed above and the keys may be one of the following:
 - A single character representing a character that would be typed (like `"A"`, `"["`, or `"Ä"` if your keyboard supports typing such a character)
+- A function key, written as `"fNUMBER"` where `NUMBER` is replaced with a non-negative integer (`"f5"` as an example for function key 5)
 - The name of a key, from the following list:
+    - `"left"`: left arrow
+    - `"right"`: right arrow
+    - `"up"`: up arrow
+    - `"down"`: down arrow
+    - `"home"`: home key
+    - `"end"`: end key
+    - `"pageup"`: page up key
+    - `"pagedown"`: page down key
+    - `"tab"`: tab key
+    - `"backtab"`: tab key with shift held down
+    - `"insert"`: insert key
+    - `"esc"`: escape key
     - `"enter"`: the enter/return key
     - `"backspace"`: the backspace key
     - `"delete"`: the delete key
